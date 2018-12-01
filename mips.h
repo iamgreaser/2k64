@@ -7,21 +7,33 @@
 #define MIPS_VERSION 1
 #endif
 
-#if MIPS_VERSION >= 3 && 0
+#if MIPS_VERSION >= 3
 #define UREG uint64_t
 #define SREG int64_t
 #define REGSIZE 64
+#if 0
+#define SIGNEX32R(C,ridx) { \
+	(C)->regs[ridx] = (UREG)(SREG)(int32_t)(uint32_t)((C)->regs[ridx]); \
+	printf("signex %016llX\n", (C)->regs[ridx]); \
+}
+#else
+#define SIGNEX32R(C,ridx) {  \
+	(C)->regs[ridx] = (UREG)(SREG)(int32_t)(uint32_t)((C)->regs[ridx]); \
+}
+#endif
+
 #else
 #define UREG uint32_t
 #define SREG int32_t
 #define REGSIZE 32
+#define SIGNEX32R(C,ridx) {}
 #endif
 
 struct MIPSNAME
 {
 	// main stuff
-	UREG regs[32]; // regs[0] must be 0 at all times!
-	UREG pc;
+	SREG regs[32]; // regs[0] must be 0 at all times!
+	SREG pc;
 	UREG rlo, rhi;
 
 	// cop0 regs
@@ -76,7 +88,7 @@ struct MIPSNAME
 
 	// pipelining
 	uint32_t pl0_op;
-	UREG pl0_pc;
+	SREG pl0_pc;
 	bool pl0_is_branch;
 
 	// TLB
@@ -89,7 +101,7 @@ struct MIPSNAME
 #endif
 
 	// hooks
-	enum mipserr (*f_mem_read )(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t *data);
+	enum mipserr (*f_mem_read)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t *data);
 	void (*f_mem_write)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t data);
 };
 
@@ -98,7 +110,7 @@ enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data);
 void MIPSXNAME(_cpu_reset)(struct MIPSNAME *C)
 {
 	// set PC
-	C->pc = 0xBFC00000;
+	C->pc = (SREG)(int32_t)0xBFC00000;
 
 	// flush pipeline
 	C->pl0_op = 0x00000000;
@@ -126,6 +138,25 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	assert(cause >= MER_Int && cause <= MER_Ov);
 
 	printf("Throw exception %016llX, cause %d\n", (unsigned long long)epc, ((int)cause)-1);
+
+	for(int i = 0; i < 32; i++) {
+		printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
+	}
+
+#if 0
+	for(int i = 0x00200000; i < 0x00202000; i++) {
+		uint32_t mdata = 0x55555555;
+		if(i%16 == 0) {
+			printf("%08X:", i);
+		}
+		int e = MIPSXNAME(_read8_unchecked)(C, i, &mdata);
+		printf(" %02X", mdata);
+		if((i+1)%16 == 0) {
+			printf("\n");
+		}
+	}
+#endif
+
 	uint32_t opdata = 0xFFFFFFFF;
 	MIPSXNAME(_read32)(C, epc, &opdata);
 	printf("op refetch = %08X\n", opdata);
@@ -136,6 +167,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	C->c0.n.epc = epc;
 	C->pl0_op = 0x00000000;
 	C->pc = ((C->c0.n.sr & C0SR_BEV) != 0 ? 0xBFC00200 : 0x80000000);
+	C->pc = (SREG)(int32_t)C->pc;
 	if(cause == MER_TLBL || cause == MER_TLBS) {
 		// TODO: XTLB
 	} else {
@@ -198,12 +230,13 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 
 			if((C->c0.n.sr & C0SR_KSU_mask) != C0SR_KSU_Supervisor
 				|| (*addr & 0xE0000000) != 0xC0000000) {
+				printf("YOU AIN'T THE KERNEL\n");
 				return (is_write ? MER_AdES : MER_AdEL);
 			} 
 		}
 	}
 
-	if(*addr >= 0x80000000LLU && *addr <= 0xBFFFFFFFLLU) {
+	if(*addr >= (UREG)(SREG)(int32_t)0x80000000LLU && *addr <= (UREG)(SREG)(int32_t)0xBFFFFFFFLLU) {
 		enum mipserr ret = ((*addr&0x20000000)!=0
 			? MER_UNCACHEABLE : MER_NONE);
 		*addr &= 0x1FFFFFFF;
@@ -219,11 +252,25 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 			struct MIPSXNAME(_tlbent) *T = &C->tlb[i];
 
 			// Page mask check
-			uint32_t pmask = ((T->pagemask<<1)+1);
-			if((*addr & ~pmask) != (T->entryhi & ~pmask)) { continue; }
+			//uint32_t pmask = ((T->pagemask<<1)+1);
+			uint32_t pmask = T->pagemask;
+			//printf("tlb %2d: %08X %08X %08X %08X\n", i, T->entryhi, T->pagemask, pmask, *addr);
+			if((*addr & ~pmask) != (T->entryhi & ~pmask)) {
+				continue;
+			}
 
 			// TLB shutdown check
 			if(good_tlb != -1) {
+				// FIXME: kludge to force this to somehow work when TLB not initialised
+				// we're preventing invalid TLBs from making a TLB shutdown happen
+				uint32_t pmask = T->pagemask;
+				uint32_t entidx = (*addr & pmask)>>12;
+				uint32_t lo = T->entrylo[entidx&1];
+				if((lo & 2) == 0) {
+					continue;
+				}
+
+				printf("tlb %2d: %08X %08X %08X %08X\n", i, T->entryhi, T->pagemask, pmask, *addr);
 				printf("TLB SHUTDOWN, FUCK THIS SHIT\n");
 				fflush(stdout);
 				abort();
@@ -231,6 +278,7 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 
 			// Use this index
 			good_tlb = i;
+			//break;
 		}
 
 		if(good_tlb != -1) {
@@ -267,40 +315,42 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 	}
 }
 
-enum mipserr MIPSXNAME(_read32_unchecked)(struct MIPSNAME *C, uint32_t addr, uint32_t *data)
+enum mipserr MIPSXNAME(_read32_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
 	return C->f_mem_read(C, addr, 0xFFFFFFFF, data);
 }
 
-enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint32_t addr, uint32_t *data)
+enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
 	enum mipserr e = C->f_mem_read(C, addr, 0xFFFF<<(((~addr)&1)<<4), data);
 	if(e != MER_NONE) {
 		return e;
 	}
-	*data >>= ((addr&1)<<4);
+	*data >>= (((~addr)&1)<<4);
 	*data &= 0xFFFF;
 	return e;
 }
 
-enum mipserr MIPSXNAME(_read8_unchecked)(struct MIPSNAME *C, uint32_t addr, uint32_t *data)
+enum mipserr MIPSXNAME(_read8_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
-	enum mipserr e = C->f_mem_read(C, addr, 0xFF<<(((~addr)&3)<<3), data);
+	uint32_t mask = 0xFF<<(((~addr)&3)<<3);
+	enum mipserr e = C->f_mem_read(C, addr, mask, data);
+	//enum mipserr e = C->f_mem_read(C, addr, 0xFFFFFFFF, data);
 	if(e != MER_NONE) {
 		return e;
 	}
-	*data >>= ((addr&3)<<3);
+	*data >>= (((~addr)&3)<<3);
 	*data &= 0xFF;
 	return e;
 }
 
-enum mipserr MIPSXNAME(_write32_unchecked)(struct MIPSNAME *C, uint32_t addr, uint32_t data)
+enum mipserr MIPSXNAME(_write32_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t data)
 {
 	C->f_mem_write(C, addr, 0xFFFFFFFF, data);
 	return MER_NONE;
 }
 
-enum mipserr MIPSXNAME(_write16_unchecked)(struct MIPSNAME *C, uint32_t addr, uint32_t data)
+enum mipserr MIPSXNAME(_write16_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t data)
 {
 	data &= 0xFFFF;
 	data |= (data<<16);
@@ -308,7 +358,7 @@ enum mipserr MIPSXNAME(_write16_unchecked)(struct MIPSNAME *C, uint32_t addr, ui
 	return MER_NONE;
 }
 
-enum mipserr MIPSXNAME(_write8_unchecked)(struct MIPSNAME *C, uint32_t addr, uint32_t data)
+enum mipserr MIPSXNAME(_write8_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t data)
 {
 	data &= 0xFF;
 	data |= (data<<8);
@@ -543,13 +593,17 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 	assert(C->regs[0] == 0);
 
+	C->pc = (SREG)(int32_t)C->pc;
+
 	// Fetch op
 	uint32_t op = C->pl0_op;
-	UREG op_pc = C->pl0_pc;
+	SREG op_pc = C->pl0_pc;
 	bool op_was_branch = C->pl0_is_branch;
-	UREG new_pc = C->pc;
+	SREG new_pc = C->pc;
 	uint32_t new_op = 0xFFFFFFFF; // shut the compiler up
 	enum mipserr e_ifetch = MIPSXNAME(_fetch_op)(C, &new_op);
+
+	//printf("OPDATA: %016llX: %08X\n", op_pc, op);
 
 	// Run op
 	C->pl0_is_branch = false;
@@ -557,10 +611,10 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 	//
 	// OPCODE EXECUTION BEG
 	//
-	uint32_t rs = (op>>21U)&31U;
-	uint32_t rt = (op>>16U)&31U;
-	uint32_t rd = (op>>11U)&31U;
-	uint32_t shamt = (op>>6U)&31U;
+	uint32_t rs = (op>>21U)&0x1FU;
+	uint32_t rt = (op>>16U)&0x1FU;
+	uint32_t rd = (op>>11U)&0x1FU;
+	uint32_t shamt = (op>>6U)&0x1FU;
 
 	switch(op>>26U) {
 		// SPECIAL
@@ -569,28 +623,34 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			case 0: // SLL
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rt] << shamt;
+					SIGNEX32R(C, rd);
 				} break;
 			case 2: // SRL
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rt] >> shamt;
+					SIGNEX32R(C, rd);
 				} break;
 			case 3: // SRA
 				if(rd != 0) {
 					C->regs[rd] = (uint32_t)(((int32_t)C->regs[rt]) >> (int32_t)shamt);
+					SIGNEX32R(C, rd);
 				} break;
 
 			// S(LL|RL|RA)V
 			case 4: // SLLV
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rt] << (C->regs[rs]);
+					SIGNEX32R(C, rd);
 				} break;
 			case 6: // SRLV
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rt] >> (C->regs[rs]);
+					SIGNEX32R(C, rd);
 				} break;
 			case 7: // SRAV
 				if(rd != 0) {
 					C->regs[rd] = (uint32_t)(((int32_t)C->regs[rt]) >> (int32_t)(C->regs[rs]));
+					SIGNEX32R(C, rd);
 				} break;
 
 			// J(AL)?R
@@ -632,16 +692,16 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					int64_t in_a = (int64_t)(int32_t)C->regs[rs];
 					int64_t in_b = (int64_t)(int32_t)C->regs[rt];
 					int64_t res = in_a * in_b;
-					C->rlo = (UREG)(uint32_t)res;
-					C->rhi = (UREG)(uint32_t)(res>>32U);
+					C->rlo = (SREG)(int32_t)res;
+					C->rhi = (SREG)(int32_t)(res>>32U);
 				} break;
 			case 25: // MULTU
 				{
 					uint64_t in_a = (uint64_t)(uint32_t)C->regs[rs];
 					uint64_t in_b = (uint64_t)(uint32_t)C->regs[rt];
 					uint64_t res = in_a * in_b;
-					C->rlo = (UREG)(SREG)(int32_t)res;
-					C->rhi = (UREG)(SREG)(int32_t)(res>>32U);
+					C->rlo = (SREG)(int32_t)res;
+					C->rhi = (SREG)(int32_t)(res>>32U);
 				} break;
 			case 26: // DIV
 				// TODO: find result of zero division on THIS particular MIPS version
@@ -650,15 +710,15 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					int32_t in_a = (int32_t)C->regs[rs];
 					int32_t in_b = (int32_t)C->regs[rt];
 					if(in_b == 0) {
-						C->rlo = (in_a >= 0
+						C->rlo = (SREG)(in_a >= 0
 							? (UREG)(SREG)-1
 							: (UREG)1);
-						C->rhi = in_a;
+						C->rhi = (SREG)in_a;
 					} else {
 						int32_t quo = in_a / in_b;
 						int32_t rem = in_a % in_b;
-						C->rlo = (UREG)quo;
-						C->rhi = (UREG)rem;
+						C->rlo = (SREG)quo;
+						C->rhi = (SREG)rem;
 					}
 				} break;
 			case 27: // DIVU
@@ -666,13 +726,13 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					uint32_t in_a = (uint32_t)C->regs[rs];
 					uint32_t in_b = (uint32_t)C->regs[rt];
 					if(in_b == 0) {
-						C->rlo = (UREG)(SREG)-1;
-						C->rhi = in_a;
+						C->rlo = (SREG)-1;
+						C->rhi = (SREG)(int32_t)in_a;
 					} else {
 						uint32_t quo = in_a / in_b;
 						uint32_t rem = in_a % in_b;
-						C->rlo = (UREG)(SREG)quo;
-						C->rhi = (UREG)(SREG)rem;
+						C->rlo = (SREG)(int32_t)quo;
+						C->rhi = (SREG)(int32_t)rem;
 					}
 				} break;
 
@@ -680,7 +740,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			case 32: // ADD
 				{ 
 					uint32_t s1 = C->regs[rs];
-					uint32_t s2 = C->regs[rd];
+					uint32_t s2 = C->regs[rt];
 					uint32_t dv = s1 + s2;
 
 					// Trap on signed overflow
@@ -693,16 +753,18 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 					if(rd != 0) {
 						C->regs[rd] = dv;
+						SIGNEX32R(C, rd);
 					}
 				} break;
 			case 33: // ADDU
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rs] + C->regs[rt];
+					SIGNEX32R(C, rd);
 				} break;
 			case 34: // SUB
 				{ 
 					uint32_t s1 = C->regs[rs];
-					uint32_t s2 = C->regs[rd];
+					uint32_t s2 = C->regs[rt];
 					uint32_t dv = s1 - s2;
 
 					// Trap on signed overflow
@@ -714,11 +776,13 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 					if(rd != 0) {
 						C->regs[rd] = dv;
+						SIGNEX32R(C, rd);
 					}
 				} break;
 			case 35: // SUBU
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rs] - C->regs[rt];
+					SIGNEX32R(C, rd);
 				} break;
 
 			// Logic ops
@@ -742,11 +806,11 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			// SLTU?
 			case 42: // SLT
 				if(rd != 0) {
-					C->regs[rt] = ((int32_t)C->regs[rs] < (int32_t)C->regs[rt]) ? 1 : 0;
+					C->regs[rd] = ((SREG)C->regs[rs] < (SREG)C->regs[rt]) ? 1 : 0;
 				} break;
 			case 43: // SLTU
 				if(rd != 0) {
-					C->regs[rt] = (C->regs[rs] < C->regs[rt]) ? 1 : 0;
+					C->regs[rd] = ((UREG)C->regs[rs] < (UREG)C->regs[rt]) ? 1 : 0;
 				} break;
 			default:
 				// Invalid opcode
@@ -760,58 +824,64 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		// REGIMM
 		case 1: switch(rt) {
 			case 0: // BLTZ
-				if(C->regs[rs] < 0) {
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				if(((SREG)C->regs[rs]) < 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} break;
 			case 1: // BGEZ
-				if(C->regs[rs] >= 0) {
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				if(((SREG)C->regs[rs]) >= 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} break;
+
+#if 1
 			case 2: // BLTZL
-				if(C->regs[rs] < 0) {
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				if(((SREG)C->regs[rs]) < 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} else {
 					new_op = 0;
 				} break;
 			case 3: // BGEZL
-				if(C->regs[rs] >= 0) {
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				if(((SREG)C->regs[rs]) >= 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} else {
 					new_op = 0;
 				} break;
+#endif
 
 			case 16: // BLTZAL
-				if(C->regs[rs] < 0) {
-					C->regs[31] = op_pc + 8;
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->regs[31] = op_pc + 8;
+				if(((SREG)C->regs[rs]) < 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} break;
 			case 17: // BGEZAL
-				if(C->regs[rs] >= 0) {
-					C->regs[31] = op_pc + 8;
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->regs[31] = op_pc + 8;
+				if(((SREG)C->regs[rs]) >= 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} break;
-			case 18: // BLTZAL
-				if(C->regs[rs] < 0) {
-					C->regs[31] = op_pc + 8;
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
-					C->pl0_is_branch = true;
-				} else {
-					new_op = 0;
-				} break;
-			case 19: // BGEZAL
-				if(C->regs[rs] >= 0) {
-					C->regs[31] = op_pc + 8;
-					C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+
+#if 1
+			case 18: // BLTZALL
+				C->regs[31] = op_pc + 8;
+				if(((SREG)C->regs[rs]) < 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} else {
 					new_op = 0;
 				} break;
+			case 19: // BGEZALL
+				C->regs[31] = op_pc + 8;
+				if(((SREG)C->regs[rs]) >= 0) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
+					C->pl0_is_branch = true;
+				} else {
+					new_op = 0;
+				} break;
+#endif
 
 			default:
 				// Invalid opcode
@@ -837,22 +907,22 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		// XXX: do we add from new_pc or do we do pc+4+imm?
 		case 4: // BEQ
 			if(C->regs[rs] == C->regs[rt]) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} break;
 		case 5: // BNE
 			if(C->regs[rs] != C->regs[rt]) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} break;
 		case 6: // BLEZ
 			if(C->regs[rs] <= 0) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} break;
 		case 7: // BGTZ
 			if(C->regs[rs] > 0) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} break;
 
@@ -872,21 +942,24 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				if(rt != 0) {
 					C->regs[rt] = (uint32_t)dv;
 				}
+				C->regs[rt] = (SREG)(int32_t)(C->regs[rt]);
+				SIGNEX32R(C, rt);
 			} break;
 		case 9: // ADDIU
 			if(rt != 0) {
-				C->regs[rt] = C->regs[rs] + (uint32_t)(int32_t)(int16_t)op;
+				C->regs[rt] = C->regs[rs] + (SREG)(int16_t)op;
+				SIGNEX32R(C, rt);
 			} break;
 
 		// IDT you lied to me, you told me these were SUBI/SUBIU
 		// SLTIU?
 		case 10: // SLTI
 			if(rt != 0) {
-				C->regs[rt] = ((int32_t)C->regs[rs] < (int32_t)(int16_t)op) ? 1 : 0;
+				C->regs[rt] = ((SREG)C->regs[rs] < (SREG)(int16_t)op) ? 1 : 0;
 			} break;
 		case 11: // SLTIU
 			if(rt != 0) {
-				C->regs[rt] = (C->regs[rs] < (uint32_t)(uint16_t)op) ? 1 : 0;
+				C->regs[rt] = ((UREG)C->regs[rs] < (UREG)(uint16_t)op) ? 1 : 0;
 			} break;
 
 		// Logic ops + LUI
@@ -905,6 +978,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		case 15: // LUI
 			if(rt != 0) {
 				C->regs[rt] = (op&0xFFFFU)<<16U;
+				SIGNEX32R(C, rt);
 			} break;
 
 		// COP0
@@ -922,22 +996,27 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				case 8: // c0_badvaddr
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.badvaddr;
+						SIGNEX32R(C, rt);
 					} break;
 				case 12: // c0_sr
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.sr;
+						SIGNEX32R(C, rt);
 					} break;
 				case 13: // c0_cause
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.cause;
+						SIGNEX32R(C, rt);
 					} break;
 				case 14: // c0_epc
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.epc;
+						SIGNEX32R(C, rt);
 					} break;
 				case 16: // c0_config
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.config;
+						SIGNEX32R(C, rt);
 					} break;
 
 				default:
@@ -963,7 +1042,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					break;
 
 				case 5: // c0_pagemask
-					C->c0.n.pagemask = (C->regs[rt] & 0x00FFF000)|0xFFF;
+					C->c0.n.pagemask = (C->regs[rt] & 0x01FFE000)|0x1FFF;
 					break;
 
 				case 8: // c0_badvaddr
@@ -1009,6 +1088,16 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					C->c0.n.config |= (C->regs[rt] & 0x0F00800F);
 					break;
 
+				case 28: // c0_taglo
+					C->c0.n.taglo &= ~0x0FFFFFC0;
+					C->c0.n.taglo |= (C->regs[rt] & 0x0FFFFFC0);
+					break;
+
+				case 29: // c0_taghi
+					C->c0.n.taghi &= ~0x00000000;
+					C->c0.n.taghi |= (C->regs[rt] & 0x00000000);
+					break;
+
 				default:
 					printf("RI MTC0 %2u %08X -> %08X %d (COP0)\n"
 						, rd, op_pc, new_pc, op_was_branch
@@ -1034,6 +1123,10 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					C->tlb[idx].entryhi = C->c0.n.entryhi;
 					C->tlb[idx].pagemask = C->c0.n.pagemask;
 					printf("entryhi %08X\n", C->c0.n.entryhi);
+					printf("entrylo0 %08X\n", C->c0.n.entrylo0);
+					printf("entrylo1 %08X\n", C->c0.n.entrylo1);
+					printf("pagemask %08X\n", C->c0.n.pagemask);
+					printf("idx %d\n", idx);
 				} break;
 #endif
 				default:
@@ -1088,28 +1181,28 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		// XXX: do we add from new_pc or do we do pc+4+imm?
 		case 20: // BEQL
 			if(C->regs[rs] == C->regs[rt]) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} else {
 				new_op = 0;
 			} break;
 		case 21: // BNEL
 			if(C->regs[rs] != C->regs[rt]) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} else {
 				new_op = 0;
 			} break;
 		case 22: // BLEZL
 			if(C->regs[rs] <= 0) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} else {
 				new_op = 0;
 			} break;
 		case 23: // BGTZL
 			if(C->regs[rs] >= 0) {
-				C->pc = new_pc + (((UREG)(SREG)(int16_t)op)<<2);
+				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} else {
 				new_op = 0;
@@ -1117,39 +1210,39 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 		// Basic loads
 		case 32: // LB
-			e = MIPSXNAME(_read8)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
+			e = MIPSXNAME(_read8)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
 			}
 			if(rt != 0) {
-				C->regs[rt] = (uint32_t)(int32_t)(int8_t)mdata;
+				C->regs[rt] = (SREG)(int8_t)mdata;
 			}
 			break;
 		case 33: // LH
-			e = MIPSXNAME(_read16)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
+			e = MIPSXNAME(_read16)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
 			}
 			if(rt != 0) {
-				C->regs[rt] = (uint32_t)(int32_t)(int16_t)mdata;
+				C->regs[rt] = (SREG)(int16_t)mdata;
 			}
 			break;
 		case 35: // LW
-			e = MIPSXNAME(_read32)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
+			e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
 			}
 			if(rt != 0) {
-				C->regs[rt] = mdata;
+				C->regs[rt] = (SREG)(int32_t)mdata;
 			}
 			break;
 
 		// Unsigned loads
 		case 36: // LBU
-			e = MIPSXNAME(_read8)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
+			e = MIPSXNAME(_read8)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
@@ -1159,7 +1252,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			}
 			break;
 		case 37: // LHU
-			e = MIPSXNAME(_read16)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
+			e = MIPSXNAME(_read16)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
@@ -1173,13 +1266,14 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		case 34: // LWL
 			printf("SHIT\n"); fflush(stdout); abort();
 			mdata = C->regs[rt];
-			e = MIPSXNAME(_read32l)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
+			e = MIPSXNAME(_read32l)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
 			}
 			if(rt != 0) {
 				C->regs[rt] = mdata;
+				SIGNEX32R(C, rt);
 			}
 			break;
 		case 38: // LWR
@@ -1192,26 +1286,27 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			}
 			if(rt != 0) {
 				C->regs[rt] = mdata;
+				SIGNEX32R(C, rt);
 			}
 			break;
 
 		// Basic stores
 		case 40: // SB
-			e = MIPSXNAME(_write8)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, C->regs[rt]);
+			e = MIPSXNAME(_write8)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
 			}
 			break;
 		case 41: // SH
-			e = MIPSXNAME(_write16)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, C->regs[rt]);
+			e = MIPSXNAME(_write16)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
 			}
 			break;
 		case 43: // SW
-			e = MIPSXNAME(_write32)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, C->regs[rt]);
+			e = MIPSXNAME(_write32)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
@@ -1221,7 +1316,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		// Unaligned stores
 		case 42: // SWL
 			printf("SHIT\n"); fflush(stdout); abort();
-			e = MIPSXNAME(_write32l)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, C->regs[rt]);
+			e = MIPSXNAME(_write32l)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
@@ -1229,7 +1324,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			break;
 		case 46: // SWR
 			printf("SHIT\n"); fflush(stdout); abort();
-			e = MIPSXNAME(_write32r)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, C->regs[rt]);
+			e = MIPSXNAME(_write32r)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
 				return e;
@@ -1239,7 +1334,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		// CACHE
 		case 47: // CACHE
 			// TODO!
-			printf("CACHE %2u %08X\n", rt, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op);
+			if(rt != 8 && rt != 9) {
+				printf("CACHE %2u %08X\n", rt, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op);
+			}
 			break;
 
 		default:
@@ -1261,6 +1358,14 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		return e_ifetch;
 	}
 
+	//if(new_pc == op_pc - 4) {
+	if(new_op == 0x0411FFFF) {
+	//if(new_pc == (SREG)(int32_t)0xA40015F8) {
+		MIPSXNAME(_throw_exception)(C, op_pc, MER_Int, op_was_branch);
+		printf("OP OLD: %016llX: %08X\n", op_pc, op);
+		printf("OP NEW: %016llX: %08X\n", new_pc, new_op);
+	}
+
 	// Copy new op
 	C->pl0_op = new_op;
 	C->pl0_pc = new_pc;
@@ -1274,6 +1379,7 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 	// initialise main regs
 	for(int i = 1; i < 32; i++) {
 		C->regs[i] = fullrandu64();
+		C->regs[i] = 0;
 	}
 	C->regs[0] = 0;
 	C->rlo = fullrandu64();
@@ -1315,6 +1421,7 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 #undef UREG
 #undef SREG
 #undef REGSIZE
+#undef SIGNEX32R
 
 #undef MIPS_VERSION
 #undef MIPS_MMU_ENTRIES

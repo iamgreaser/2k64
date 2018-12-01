@@ -66,3 +66,20 @@ enum mipserr
 #define C0CONFIG_EC_mask (0x7<<28)
 #define C0CONFIG_EC_shift 28
 
+const char *mips_gpr_names[32] = {
+	"z0", // "zero" but I like to fit these into two chars
+	"at",
+	"v0", "v1",
+	"a0", "a1", "a2", "a3",
+
+	// this is either t0+ (O32) or a4+ (N32/N64) depending on calling convention
+	// no, N64 doesn't mean Nintendo 64 here!
+	"t0", "t1", "t2", "t3",
+
+	"t4", "t5", "t6", "t7",
+	"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
+	"t8", "t9",
+	"k0", "k1",
+	"gp", "sp", "fp", "ra",
+};
+

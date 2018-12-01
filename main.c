@@ -55,6 +55,12 @@ uint32_t rsp_mem[8*256];
 uint32_t rsp_status = 0x00000001;
 bool rsp_intr = false;
 
+uint32_t pi_dram_addr = 0;
+uint32_t pi_cart_addr = 0;
+uint32_t pi_rd_len = 0;
+uint32_t pi_wr_len = 0;
+uint32_t pi_status = 0;
+
 static struct vr4300 vr4300_baseinst;
 
 enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data)
@@ -131,6 +137,9 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 			(unsigned long long)addr, mask);
 		switch(addr)
 		{
+			case 0x04600010: // PI_STATUS_REG
+				data_out = pi_status;
+				break;
 			default:
 				data_out = 0;
 				break;
@@ -248,6 +257,44 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	} else if(addr >= 0x04600000 && addr < 0x046FFFFF) {
 		printf("PI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
+		switch(addr)
+		{
+			case 0x04600000: // PI_DRAM_ADDR_REG
+				pi_dram_addr = data & 0xFFFFFF;
+				break;
+			case 0x04600004: // PI_CART_ADDR_REG
+				// FIXME: apparently all 32 bits are used
+				pi_cart_addr = data & 0xFFFFFF;
+				break;
+			case 0x04600008: // PI_RD_LEN_REG
+				pi_rd_len = data & 0xFFFFFF;
+				pi_rd_len += 1;
+				pi_status |= 0x1;
+				break;
+			case 0x0460000C: // PI_WR_LEN_REG
+				pi_wr_len = data & 0xFFFFFF;
+				pi_wr_len += 1;
+				pi_status |= 0x1;
+				break;
+			case 0x04600010: // PI_STATUS_REG
+				break;
+			default:
+				break;
+		}
+
+		// FIXME: this is lazy and should actually emulate separately
+		while((pi_wr_len&~3) != 0) {
+			uint32_t data = cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
+			ram[(pi_dram_addr>>2)%(sizeof(ram)/sizeof(uint32_t))] = data;
+			//n64primary_mem_read (C, pi_cart_addr, 0xFF<<((~pi_cart_addr)&0x3), &mdata);
+			//n64primary_mem_write(C, pi_dram_addr, 0xFF<<((~pi_dram_addr)&0x3), &mdata);
+			//printf("Copy byte %08X <- %08X\n", pi_dram_addr, pi_cart_addr);
+			pi_dram_addr += 4;
+			pi_cart_addr += 4;
+			pi_wr_len -= 4;
+		}
+		pi_status &= ~0x1;
+
 		return;
 
 	} else if(addr >= 0x04700000 && addr < 0x047FFFFF) {
@@ -328,12 +375,20 @@ int main(int argc, char *argv[])
 	pifmem[0x7FC>>2] = 0;
 	pifmem[0x7E4>>2] = 0; // we have nothing in the expansion slot!
 
+#if 0
+	// ROM checksum hacks
+	cartmem[0x0010>>2] = 0x6285AD5B; // A3
+	cartmem[0x0014>>2] = 0x5258B8E7; // S0
+#endif
+
+#if 0
 	// ROM DL hacks
 	memcpy(ram, cartmem, 4*1024*1024);
 	C->c0.n.sr = 0x34000000;
 	C->pl0_op = 0;
-	C->pc = cartmem[0x0008>>2];
+	C->pc = (int64_t)(int32_t)cartmem[0x0008>>2];
 	printf("new pc: %08X\n", C->pc);
+#endif
 
 	C->f_mem_read  = n64primary_mem_read;
 	C->f_mem_write = n64primary_mem_write;
