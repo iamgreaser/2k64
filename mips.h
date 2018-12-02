@@ -40,6 +40,48 @@ struct MIPSNAME
 	union {
 		UREG i[32];
 		struct {
+#ifdef MIPS_IS_RSP
+			UREG dma_cache; // 0
+			UREG dma_dram; // 1
+			UREG dma_read_length; // 2
+			UREG dma_write_length; // 3
+
+			UREG sp_status; // 4
+			UREG _05; // 5
+			UREG _06; // 6
+			UREG sp_reserved; // 7
+
+			UREG _08; // 8
+			UREG _09; // 9
+			UREG _10; // 10
+			UREG _11; // 11
+
+			UREG _12; // 12
+			UREG _13; // 13
+			UREG _14; // 14
+			UREG _15; // 15
+
+			UREG _16; // 16
+			UREG _17; // 17
+			UREG _18; // 18
+			UREG _19; // 19
+
+			UREG _20; // 20
+			UREG _21; // 21
+			UREG _22; // 22
+			UREG _23; // 23
+
+			UREG _24; // 24
+			UREG _25; // 25
+			UREG _26; // 26
+			UREG _27; // 27
+
+			UREG _28; // 28
+			UREG _29; // 29
+			UREG _30; // 30
+			UREG _31; // 31
+
+#else
 			UREG index; // 0
 			UREG random; // 1
 			UREG entrylo0; // 2
@@ -79,8 +121,22 @@ struct MIPSNAME
 			UREG taghi; // 29
 			UREG errorepc; // 30
 			UREG _31; // 31
+#endif
 		} n;
 	} c0;
+
+#ifdef MIPS_IS_RSP
+	// cop2 regs
+	union {
+		uint8_t b[32][16];
+		uint16_t h[32][8];
+		uint32_t w[32][4];
+		uint64_t d[32][2];
+	} c2;
+
+	// RSP special
+	bool rsp_intr;
+#endif
 
 	// timing
 	int64_t tickrem;
@@ -110,13 +166,20 @@ enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data);
 void MIPSXNAME(_cpu_reset)(struct MIPSNAME *C)
 {
 	// set PC
+#ifdef MIPS_IS_RSP
+	C->pc = (SREG)(int32_t)0x00000000;
+#else
 	C->pc = (SREG)(int32_t)0xBFC00000;
+#endif
 
 	// flush pipeline
 	C->pl0_op = 0x00000000;
 	C->pl0_pc = C->pc;
 	C->pl0_is_branch = false;
 
+#ifdef MIPS_IS_RSP
+
+#else
 	// set bits in c0_sr
 	C->c0.n.sr &= ~(C0SR_TS | C0SR_SR | C0SR_RP);
 	C->c0.n.sr |=  (C0SR_ERL | C0SR_BEV);
@@ -131,6 +194,7 @@ void MIPSXNAME(_cpu_reset)(struct MIPSNAME *C)
 	// set divmode
 	// XXX: we don't know what this is yet, so do something plausible
 	C->c0.n.config |=  (0x0<<C0CONFIG_EC_shift); // 1:2 scale
+#endif
 }
 
 void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr cause, bool bd)
@@ -158,6 +222,13 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 #endif
 
 	uint32_t opdata = 0xFFFFFFFF;
+#ifdef MIPS_IS_RSP
+	C->f_mem_read(C, (epc&0x0FFF)|0x1000, 0xFFFFFFFF, &opdata);
+	printf("op refetch = %08X\n", opdata);
+
+	// Halt RSP.
+	C->c0.n.sp_status |= 0x00000001;
+#else
 	MIPSXNAME(_read32)(C, epc, &opdata);
 	printf("op refetch = %08X\n", opdata);
 	printf("badvaddr = %016llX\n", (unsigned long long)C->c0.n.badvaddr);
@@ -185,16 +256,21 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 
 	// Disable interrupts (IE=0) + enter kernel mode (KUc=0)
 	C->c0.n.sr = (C->c0.n.sr&~0x3F) | ((C->c0.n.sr<<2)&0x3C);
+#endif
 }
 
 enum mipserr MIPSXNAME(_probe_interrupts)(struct MIPSNAME *C)
 {
+#ifdef MIPS_IS_RSP
+
+#else
 	if((C->c0.n.sr & C0SR_IE) != 0) {
 		if((C->c0.n.sr & C->c0.n.cause & 0x0000FF00) != 0) {
 			// Interrupt ready, you should fire an exception now
 			return MER_Int;
 		}
 	}
+#endif
 
 	return MER_NONE;
 }
@@ -208,7 +284,9 @@ void MIPSXNAME(_badvaddr_cond_set)(struct MIPSNAME *C, enum mipserr e, UREG addr
 		case MER_TLBS:
 		case MER_AdEL:
 		case MER_AdES:
+#ifndef MIPS_IS_RSP
 			C->c0.n.badvaddr = addr;
+#endif
 			break;
 		default:
 			break;
@@ -223,6 +301,10 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 	//*addr |= 0xFFFFFFFF00000000LLU;
 #endif
 
+#ifdef MIPS_IS_RSP
+	*addr &= 0x00000FFF;
+	return MER_NONE;
+#else
 	// Usermode cannot access the upper region
 	if(*addr >= 0x80000000LLU) {
 		if((C->c0.n.sr & C0SR_KSU_mask) != C0SR_KSU_Kernel
@@ -313,11 +395,16 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 		return MER_UNCACHEABLE;
 #endif
 	}
+#endif
 }
 
 enum mipserr MIPSXNAME(_read32_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
+#ifdef MIPS_IS_RSP
+	return C->f_mem_read(C, addr & 0x00000FFF, 0xFFFFFFFF, data);
+#else
 	return C->f_mem_read(C, addr, 0xFFFFFFFF, data);
+#endif
 }
 
 enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
@@ -564,6 +651,18 @@ enum mipserr MIPSXNAME(_fetch_op)(struct MIPSNAME *C, uint32_t *data)
 		return MER_AdEL;
 	}
 
+#ifdef MIPS_IS_RSP
+	// Special-case the RSP
+	enum mipserr e = C->f_mem_read(C, (addr&0x0FFF)|0x1000, 0xFFFFFFFF, data);
+	if(e != MER_NONE) {
+		if(e == MER_DBE) {
+			e = MER_IBE;
+		}
+		MIPSXNAME(_badvaddr_cond_set)(C, e, addr);
+		return e;
+	}
+
+#else
 	enum mipserr e = MIPSXNAME(_calc_addr)(C, &addr, false);
 	if(e != MER_NONE && e != MER_UNCACHEABLE) {
 		MIPSXNAME(_badvaddr_cond_set)(C, e, addr);
@@ -579,6 +678,7 @@ enum mipserr MIPSXNAME(_fetch_op)(struct MIPSNAME *C, uint32_t *data)
 		MIPSXNAME(_badvaddr_cond_set)(C, e, addr);
 		return e;
 	}
+#endif
 
 	// Advance
 	C->pc += 4;
@@ -601,7 +701,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 	bool op_was_branch = C->pl0_is_branch;
 	SREG new_pc = C->pc;
 	uint32_t new_op = 0xFFFFFFFF; // shut the compiler up
-	enum mipserr e_ifetch = MIPSXNAME(_fetch_op)(C, &new_op);
+	//enum mipserr e_ifetch = MIPSXNAME(_fetch_op)(C, &new_op);
+	enum mipserr e_ifetch = MIPSXNAME(_fetch_op)(C, &(C->pl0_op));
+	new_op = C->pl0_op;
 
 	//printf("OPDATA: %016llX: %08X\n", op_pc, op);
 
@@ -627,29 +729,29 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				} break;
 			case 2: // SRL
 				if(rd != 0) {
-					C->regs[rd] = C->regs[rt] >> shamt;
+					C->regs[rd] = (uint32_t)C->regs[rt] >> (uint32_t)shamt;
 					SIGNEX32R(C, rd);
 				} break;
 			case 3: // SRA
 				if(rd != 0) {
-					C->regs[rd] = (uint32_t)(((int32_t)C->regs[rt]) >> (int32_t)shamt);
+					C->regs[rd] = ((int32_t)C->regs[rt]) >> (int32_t)shamt;
 					SIGNEX32R(C, rd);
 				} break;
 
 			// S(LL|RL|RA)V
 			case 4: // SLLV
 				if(rd != 0) {
-					C->regs[rd] = C->regs[rt] << (C->regs[rs]);
+					C->regs[rd] = C->regs[rt] << (C->regs[rs]&0x1F);
 					SIGNEX32R(C, rd);
 				} break;
 			case 6: // SRLV
 				if(rd != 0) {
-					C->regs[rd] = C->regs[rt] >> (C->regs[rs]);
+					C->regs[rd] = ((uint32_t)C->regs[rt]) >> (uint32_t)(C->regs[rs]&0x1F);
 					SIGNEX32R(C, rd);
 				} break;
 			case 7: // SRAV
 				if(rd != 0) {
-					C->regs[rd] = (uint32_t)(((int32_t)C->regs[rt]) >> (int32_t)(C->regs[rs]));
+					C->regs[rd] = ((int32_t)C->regs[rt]) >> (int32_t)(C->regs[rs]&0x1F);
 					SIGNEX32R(C, rd);
 				} break;
 
@@ -688,22 +790,36 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 			// (MULT|DIV)U?
 			case 24: // MULT
+				printf("MULT\n");
 				{
 					int64_t in_a = (int64_t)(int32_t)C->regs[rs];
 					int64_t in_b = (int64_t)(int32_t)C->regs[rt];
 					int64_t res = in_a * in_b;
-					C->rlo = (SREG)(int32_t)res;
-					C->rhi = (SREG)(int32_t)(res>>32U);
+					C->rlo = res&0xFFFFFFFFU;
+					C->rhi = res>>32U;
+					C->rlo = (SREG)(int32_t)C->rlo;
+					C->rhi = (SREG)(int32_t)C->rhi;
 				} break;
 			case 25: // MULTU
 				{
 					uint64_t in_a = (uint64_t)(uint32_t)C->regs[rs];
 					uint64_t in_b = (uint64_t)(uint32_t)C->regs[rt];
 					uint64_t res = in_a * in_b;
-					C->rlo = (SREG)(int32_t)res;
-					C->rhi = (SREG)(int32_t)(res>>32U);
+					C->rlo = res&0xFFFFFFFFU;
+					C->rhi = res>>32U;
+					C->rlo = (SREG)(int32_t)C->rlo;
+					C->rhi = (SREG)(int32_t)C->rhi;
+#if 0
+					printf("MULTU %016llX * %016llX = %016llX = %016llX : %016llX\n",
+						in_a,
+						in_b,
+						res,
+						C->rhi,
+						C->rlo);
+#endif
 				} break;
 			case 26: // DIV
+				printf("DIV\n");
 				// TODO: find result of zero division on THIS particular MIPS version
 				// TODO: find out how the hell the remainder is calculated
 				{
@@ -722,6 +838,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					}
 				} break;
 			case 27: // DIVU
+				printf("DIVU\n");
 				{
 					uint32_t in_a = (uint32_t)C->regs[rs];
 					uint32_t in_b = (uint32_t)C->regs[rt];
@@ -738,6 +855,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 			// (ADD|SUB)U?
 			case 32: // ADD
+#ifndef MIPS_IS_RSP
 				{ 
 					uint32_t s1 = C->regs[rs];
 					uint32_t s2 = C->regs[rt];
@@ -756,12 +874,16 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 						SIGNEX32R(C, rd);
 					}
 				} break;
+#else
+			// FALL THROUGH
+#endif
 			case 33: // ADDU
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rs] + C->regs[rt];
 					SIGNEX32R(C, rd);
 				} break;
 			case 34: // SUB
+#ifndef MIPS_IS_RSP
 				{ 
 					uint32_t s1 = C->regs[rs];
 					uint32_t s2 = C->regs[rt];
@@ -779,6 +901,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 						SIGNEX32R(C, rd);
 					}
 				} break;
+#else
+			// FALL THROUGH
+#endif
 			case 35: // SUBU
 				if(rd != 0) {
 					C->regs[rd] = C->regs[rs] - C->regs[rt];
@@ -928,6 +1053,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 		// ADDIU?
 		case 8: // ADDI
+#ifndef MIPS_IS_RSP
 			{ 
 				int32_t s1 = (int32_t)(C->regs[rs]);
 				int32_t s2 = (int32_t)(int16_t)op;
@@ -945,6 +1071,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				C->regs[rt] = (SREG)(int32_t)(C->regs[rt]);
 				SIGNEX32R(C, rt);
 			} break;
+#else
+			// FALL THROUGH
+#endif
 		case 9: // ADDIU
 			if(rt != 0) {
 				C->regs[rt] = C->regs[rs] + (SREG)(int16_t)op;
@@ -982,7 +1111,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			} break;
 
 		// COP0
-		case 16: if((C->c0.n.sr & C0SR_KSU_mask) != C0SR_KSU_Kernel
+		case 16:
+#ifndef MIPS_IS_RSP
+		if((C->c0.n.sr & C0SR_KSU_mask) != C0SR_KSU_Kernel
 				&& (C->c0.n.sr & (C0SR_EXL|C0SR_ERL)) == 0
 				&& (C->c0.n.sr & C0SR_CU(0)) == 0
 				) {
@@ -990,9 +1121,37 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			C->c0.n.cause |= 0<<28;
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
 			return MER_CpU;
-		} else switch(rs) {
+		} else
+#endif
+		switch(rs) {
 			case 0: // MFCz
 			switch(rd) {
+
+#ifdef MIPS_IS_RSP
+				case 1: // DMA_DRAM
+					if(rt != 0) {
+						C->regs[rt] = C->c0.n.dma_dram;
+						SIGNEX32R(C, rt);
+					} break;
+				case 5: // DMA_FULL
+					if(rt != 0) {
+						C->regs[rt] = (C->c0.n.sp_status>>3)&0x1;
+						SIGNEX32R(C, rt);
+					} break;
+				case 6: // DMA_BUSY
+					if(rt != 0) {
+						C->regs[rt] = (C->c0.n.sp_status>>2)&0x1;
+						SIGNEX32R(C, rt);
+					} break;
+				case 7: // SP_RESERVED
+					if(rt != 0) {
+						C->regs[rt] = C->c0.n.sp_reserved;
+						SIGNEX32R(C, rt);
+					}
+					C->c0.n.sp_reserved |= 0x1;
+					break;
+
+#else
 				case 8: // c0_badvaddr
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.badvaddr;
@@ -1018,6 +1177,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 						C->regs[rt] = C->c0.n.config;
 						SIGNEX32R(C, rt);
 					} break;
+#endif
 
 				default:
 					printf("RI MFC0 %2u %08X -> %08X %d (COP0)\n"
@@ -1025,11 +1185,28 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 						);
 					MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 					return MER_RI;
-
 			} break;
 
 			case 4: // MTCz
 			switch(rd) {
+
+#ifdef MIPS_IS_RSP
+				case 0: // DMA_CACHE
+					printf("DMA_CACHE %08X\n", C->regs[rt]);
+					C->c0.n.dma_cache = C->regs[rt] & 0x1FFF;
+					break;
+				case 1: // DMA_DRAM
+					printf("DMA_DRAM %08X\n", C->regs[rt]);
+					C->c0.n.dma_dram = C->regs[rt] & 0xFFFFFF;
+					break;
+				case 2: // DMA_READ_LENGTH
+					printf("DMA_READ_LENGTH %08X\n", C->regs[rt]);
+					C->c0.n.dma_read_length = C->regs[rt];
+					break;
+				//case 3: // DMA_WRITE_LENGTH
+					//C->c0.n.dma_write_length = C->regs[rt];
+					//break;
+#else
 				case 0: // c0_index
 					C->c0.n.index = C->regs[rt] & 63;
 					break;
@@ -1097,6 +1274,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					C->c0.n.taghi &= ~0x00000000;
 					C->c0.n.taghi |= (C->regs[rt] & 0x00000000);
 					break;
+#endif
 
 				default:
 					printf("RI MTC0 %2u %08X -> %08X %d (COP0)\n"
@@ -1146,6 +1324,8 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				return MER_RI;
 		} break;
 
+#ifdef MIPS_IS_RSP
+#else
 		// COPx
 		case 17: if((C->c0.n.sr & C0SR_CU(1)) == 0) {
 			C->c0.n.cause &= ~0x30000000;
@@ -1176,9 +1356,11 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 			return MER_RI;
 		} break;
+#endif
 
 		// B(EQ|NE|(LE|GT)Z)L
 		// XXX: do we add from new_pc or do we do pc+4+imm?
+#ifndef MIPS_IS_RSP
 		case 20: // BEQL
 			if(C->regs[rs] == C->regs[rt]) {
 				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
@@ -1207,6 +1389,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			} else {
 				new_op = 0;
 			} break;
+#endif
 
 		// Basic loads
 		case 32: // LB
@@ -1339,6 +1522,34 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			}
 			break;
 
+#ifdef MIPS_IS_RSP
+		// RSP vector unit op (normally LWC2)
+		case 50: {
+			uint32_t v_base = (op>>21)&0x1F;
+			uint32_t v_vt = (op>>16)&0x1F;
+			uint32_t v_opcode = (op>>11)&0x1F;
+			uint32_t v_element = (op>>7)&0xF;
+			uint32_t v_offset = (uint32_t)(((int32_t)(op<<25))>>25);
+			switch(v_opcode)
+			{
+				// LQV
+				case 4: {
+					assert(v_element == 0);
+					C->c2.w[v_vt][0] = v_base;
+					C->c2.w[v_vt][1] = v_base;
+					C->c2.w[v_vt][2] = v_base;
+					C->c2.w[v_vt][3] = v_base;
+				} break;
+
+				default:
+					printf("RSP load op %2d %2d %2d %2d %2d\n",
+						v_base, v_vt, v_opcode, v_element, v_offset);
+					MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+					return MER_RI;
+			}
+		} break;
+#endif
+
 		default:
 			// Invalid opcode
 			printf("RI %2u %08X -> %08X %d (main)\n"
@@ -1358,6 +1569,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		return e_ifetch;
 	}
 
+#if 0
 	//if(new_pc == op_pc - 4) {
 	if(new_op == 0x0411FFFF) {
 	//if(new_pc == (SREG)(int32_t)0xA40015F8) {
@@ -1365,6 +1577,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		printf("OP OLD: %016llX: %08X\n", op_pc, op);
 		printf("OP NEW: %016llX: %08X\n", new_pc, new_op);
 	}
+#endif
 
 	// Copy new op
 	C->pl0_op = new_op;
@@ -1390,6 +1603,13 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 		C->c0.i[i] = fullrandu64();
 	}
 
+#ifdef MIPS_IS_RSP
+	C->c0.n.sp_status = 0x00000001;
+	C->c0.n.dma_read_length = 0;
+	C->c0.n.dma_write_length = 0;
+	C->rsp_intr = false;
+
+#else
 	// apply masks
 	C->c0.n.index &= 0x80003F00;
 	C->c0.n.random &= 0x00003F00;
@@ -1409,6 +1629,7 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 	if((C->c0.n.random>>8U) < 8U) {
 		C->c0.n.random = 8U<<8U;
 	}
+#endif
 
 	// perform reset
 	MIPSXNAME(_cpu_reset)(C);
