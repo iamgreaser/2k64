@@ -593,7 +593,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT,  SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
 
-	window = SDL_CreateWindow("2k64 - <jrra> you literally have a framebuffer you lazy fuck",
+	window = SDL_CreateWindow("2k64",
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
 		640, 480,

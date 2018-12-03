@@ -314,7 +314,7 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 				|| (*addr & 0xE0000000) != 0xC0000000) {
 				printf("YOU AIN'T THE KERNEL\n");
 				return (is_write ? MER_AdES : MER_AdEL);
-			} 
+			}
 		}
 	}
 
@@ -865,7 +865,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			// (ADD|SUB)U?
 			case 32: // ADD
 #ifndef MIPS_IS_RSP
-				{ 
+				{
 					uint32_t s1 = C->regs[rs];
 					uint32_t s2 = C->regs[rt];
 					uint32_t dv = s1 + s2;
@@ -893,7 +893,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				} break;
 			case 34: // SUB
 #ifndef MIPS_IS_RSP
-				{ 
+				{
 					uint32_t s1 = C->regs[rs];
 					uint32_t s2 = C->regs[rt];
 					uint32_t dv = s1 - s2;
@@ -946,6 +946,54 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				if(rd != 0) {
 					C->regs[rd] = ((UREG)C->regs[rs] < (UREG)C->regs[rt]) ? 1 : 0;
 				} break;
+
+			// D(ADD|SUB)U?
+			case 44: // DADD
+#ifndef MIPS_IS_RSP
+				{
+					uint64_t s1 = C->regs[rs];
+					uint64_t s2 = C->regs[rt];
+					uint64_t dv = s1 + s2;
+
+					// Trap on signed overflow
+					// Which is *always* horrible to detect
+					// if sgn(s1)==sgn(s2) && sgn(dv)!=sgn(s1)
+					if((0x8000000000000000ULL & (dv^s1) & ~(s1^s2)) != 0) {
+						MIPSXNAME(_throw_exception)(C, op_pc, MER_Ov, op_was_branch);
+						return MER_Ov;
+					}
+
+					if(rd != 0) {
+						C->regs[rd] = dv;
+					}
+				} break;
+			case 45: // DADDU
+				if(rd != 0) {
+					C->regs[rd] = C->regs[rs] + C->regs[rt];
+				} break;
+			case 46: // DSUB
+				{
+					uint64_t s1 = C->regs[rs];
+					uint64_t s2 = C->regs[rt];
+					uint64_t dv = s1 - s2;
+
+					// Trap on signed overflow
+					// if sgn(s1)!=sgn(s2) && sgn(dv)!=sgn(s1)
+					if((0x8000000000000000ULL & (dv^s1) & (s1^s2)) != 0) {
+						MIPSXNAME(_throw_exception)(C, op_pc, MER_Ov, op_was_branch);
+						return MER_Ov;
+					}
+
+					if(rd != 0) {
+						C->regs[rd] = dv;
+					}
+				} break;
+			case 47: // DSUBU
+				if(rd != 0) {
+					C->regs[rd] = C->regs[rs] - C->regs[rt];
+				} break;
+#endif
+
 			default:
 				// Invalid opcode
 				printf("RI %2u %08X -> %08X %d (special)\n"
@@ -1063,7 +1111,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		// ADDIU?
 		case 8: // ADDI
 #ifndef MIPS_IS_RSP
-			{ 
+			{
 				int32_t s1 = (int32_t)(C->regs[rs]);
 				int32_t s2 = (int32_t)(int16_t)op;
 				int32_t dv = s1 + s2;
@@ -1454,6 +1502,30 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 				C->pl0_is_branch = true;
 			} else {
 				new_op = 0;
+			} break;
+#endif
+
+#ifndef MIPS_IS_RSP
+		// DADDIU?
+		case 24: // DADDI
+			{
+				int64_t s1 = (int64_t)(C->regs[rs]);
+				int64_t s2 = (int64_t)(int16_t)op;
+				int64_t dv = s1 + s2;
+
+				// Trap on signed overflow
+				if((s2 < 0) ? dv > s1 : dv < s1) {
+					MIPSXNAME(_throw_exception)(C, op_pc, MER_Ov, op_was_branch);
+					return MER_Ov;
+				}
+
+				if(rt != 0) {
+					C->regs[rt] = dv;
+				}
+			} break;
+		case 25: // DADDIU
+			if(rt != 0) {
+				C->regs[rt] = C->regs[rs] + (SREG)(int16_t)op;
 			} break;
 #endif
 
