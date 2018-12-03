@@ -1,0 +1,15 @@
+# build output
+*.o
+2k64
+
+# program output
+ram.data
+
+# ROMs
+pifdata.bin
+roms/**
+
+# VIM
+.*.sw?
+*~
+
