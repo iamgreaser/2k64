@@ -1325,6 +1325,49 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		} break;
 
 #ifdef MIPS_IS_RSP
+		// COP2
+		case 18:
+		switch(rs) {
+			case 0: // MFCz
+			switch(rd) {
+				default:
+					printf("RI MFC2 %2u %08X -> %08X %d (COP2)\n"
+						, rd, op_pc, new_pc, op_was_branch
+						);
+					MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+					return MER_RI;
+			} break;
+
+			case 4: // MTCz
+			switch(rd) {
+				default:
+					printf("RI MTC2 %2u %08X -> %08X %d (COP2)\n"
+						, rd, op_pc, new_pc, op_was_branch
+						);
+					MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+					return MER_RI;
+			} break;
+
+			case 16: switch(op&0x3F) {
+
+				default:
+					printf("RI op %2u %08X -> %08X %d (COP2)\n"
+						, op&0x3F, op_pc, new_pc, op_was_branch
+						);
+					MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+					return MER_RI;
+
+			} break;
+
+			default:
+				printf("RI %2u %2u %08X -> %08X %d (COP2)\n"
+					, rs, op&0x3F, op_pc, new_pc, op_was_branch
+					);
+				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+				return MER_RI;
+		} break;
+
+
 #else
 		// COPx
 		case 17: if((C->c0.n.sr & C0SR_CU(1)) == 0) {

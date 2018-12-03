@@ -9,6 +9,7 @@
 #include <time.h>
 
 #define DEBUG_SP 1
+#define DEBUG_VI 1
 
 uint32_t fullrandu32(void)
 {
@@ -62,8 +63,8 @@ uint32_t pi_rd_len = 0;
 uint32_t pi_wr_len = 0;
 uint32_t pi_status = 0;
 
-//uint32_t pif_boot_flags = 0x00003F00; // 6102
-uint32_t pif_boot_flags = 0x00009100; // 6105
+uint32_t pif_boot_flags = 0x00003F00; // 6102
+//uint32_t pif_boot_flags = 0x00009100; // 6105
 
 static struct vr4300 vr4300_baseinst;
 static struct rsp rsp_baseinst;
@@ -242,6 +243,18 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 		switch(addr)
 		{
+			case 0x04040000: // DMA_CACHE
+				printf("DMA_CACHE %08X\n", data);
+				rsp->c0.n.dma_cache = data & 0x1FFF;
+				break;
+			case 0x04040004: // DMA_DRAM
+				printf("DMA_DRAM %08X\n", data);
+				rsp->c0.n.dma_dram = data & 0xFFFFFF;
+				break;
+			case 0x04040008: // DMA_READ_LENGTH
+				printf("DMA_READ_LENGTH %08X\n", data);
+				rsp->c0.n.dma_read_length = data;
+				break;
 			case 0x04040010:
 				if((data & 0x00000001) != 0) { rsp->c0.n.sp_status &= ~0x0001; }
 				if((data & 0x00000002) != 0) { rsp->c0.n.sp_status |=  0x0001; }
@@ -510,6 +523,7 @@ int main(int argc, char *argv[])
 		enum mipserr e_cpu = vr4300_run_op(C);
 		if((rsp->c0.n.sp_status & 0x00000001) == 0x00000000) {
 			enum mipserr e_rsp = rsp_run_op(rsp);
+#if 0
 			printf("RSP op %08X: %08X %02X %2d %2d %2d %2d %02X\n", rsp->pl0_pc, rsp->pl0_op,
 				(rsp->pl0_op>>26)&0x3F,
 				(rsp->pl0_op>>21)&0x1F,
@@ -517,6 +531,7 @@ int main(int argc, char *argv[])
 				(rsp->pl0_op>>11)&0x1F,
 				(rsp->pl0_op>>6)&0x1F,
 				(rsp->pl0_op>>0)&0x3F);
+#endif
 			if(rsp->c0.n.dma_read_length != 0) {
 				printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
 					rsp->c0.n.dma_cache,
@@ -529,6 +544,8 @@ int main(int argc, char *argv[])
 				int dst = rsp->c0.n.dma_cache;
 				int src = rsp->c0.n.dma_dram;
 
+				length += 1; length &= ~7;
+
 				assert((dst & 0x7) == 0);
 				assert((src & 0x7) == 0);
 				assert((length & 0x7) == 0);
@@ -536,12 +553,14 @@ int main(int argc, char *argv[])
 
 				for(int y = 0; y <= count; y++) {
 					for(int x = 0; x < length>>3; x++) {
-						assert(src+8 < sizeof(ram));
-						assert(dst+8 < sizeof(rsp_mem));
+						assert(src+8 <= sizeof(ram));
+						assert(dst+8 <= sizeof(rsp_mem));
 						rsp_mem[(dst>>2)+0] = ram[(src>>2)+0];
 						rsp_mem[(dst>>2)+1] = ram[(src>>2)+1];
 						dst += 8;
 						src += 8;
+						dst &= 0x1FF8;
+						src &= 0x1FF8;
 					}
 					dst += skip;
 				}
