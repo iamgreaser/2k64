@@ -95,8 +95,28 @@ uint32_t vi_width_reg = 640;
 uint32_t vi_x_scale_reg = 0;
 uint32_t vi_y_scale_reg = 0;
 
-uint32_t pif_boot_flags = 0x00003F00; // 6102
-//uint32_t pif_boot_flags = 0x00009100; // 6105
+struct {
+	char *cic_type;
+	uint32_t pif_seed;
+	uint8_t pif_rom_0x0040[16];
+} cic_boot_codes[] = {
+	{
+		"6102",
+		0x00003F00,
+		{
+			0x40, 0x80, 0x68, 0x00, 0x40, 0x80, 0x48, 0x00,
+			0x40, 0x80, 0x58, 0x00, 0x3c, 0x08, 0xa4, 0x70,
+		},
+	},
+	{
+		"6105",
+		0x00009300,
+		{
+			0x03, 0xa0, 0x48, 0x20, 0x8d, 0x28, 0xf0, 0x10,
+			0x8d, 0x6a, 0x00, 0x44, 0x01, 0x48, 0x50, 0x26,
+		},
+	},
+};
 
 static struct vr4300 vr4300_baseinst;
 static struct rsp rsp_baseinst;
@@ -539,6 +559,21 @@ int main(int argc, char *argv[])
 	}
 	memcpy(pifmem, pifimg, sizeof(pifimg));
 
+	uint32_t pifseed = 0x00000000;
+
+	// do this before byteswapping
+	for(size_t i = 0; i < sizeof(cic_boot_codes)/sizeof(cic_boot_codes[0]); i++) {
+		if(!memcmp(
+				0x0040+(uint8_t *)cartmem,
+				cic_boot_codes[i].pif_rom_0x0040,
+				sizeof(cic_boot_codes[i].pif_rom_0x0040))) {
+
+			pifseed = cic_boot_codes[i].pif_seed;
+			printf("CIC type %s detected\n", cic_boot_codes[i].cic_type);
+			break;
+		}
+	}
+
 	for(size_t i = 0; i < sizeof(cartmem)/4; i++) {
 		uint32_t v = cartmem[i];
 		uint32_t nv = 0;
@@ -547,6 +582,9 @@ int main(int argc, char *argv[])
 		nv |= ((v>>16)&0xFF)<<8;
 		nv |= ((v>>24)&0xFF)<<0;
 		cartmem[i] = nv;
+	}
+	if(pifseed == 0) {
+		printf("UNDETECTED CIC TYPE! This will most likely lock up\n");
 	}
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
@@ -579,12 +617,6 @@ int main(int argc, char *argv[])
 
 	// PIF hacks
 	pifmem[0x7FC>>2] = 0;
-	//pifmem[0x7E4>>2] = 0x00000000; // No seed
-	//pifmem[0x7E4>>2] = 0xF8CA4DDC; // 6102 CIC seed
-	//pifmem[0x7E4>>2] = 0xA3886759; // 6103 CIC seed
-	pifmem[0x7E4>>2] = 0xDF26F436; // 6105 CIC seed
-	//pifmem[0x7E4>>2] = 0x1FEA617A; // 6106 CIC seed
-	//pifmem[0x7E4>>2] = 0x36F426DF; // 6105 CIC seed byte reversed
 
 #if 0
 	// ROM checksum hacks
@@ -609,7 +641,6 @@ int main(int argc, char *argv[])
 
 	printf("EMU START\n####################\n\n");
 
-	uint32_t pifseed = pif_boot_flags;
 	pifmem[0x7E4>>2] = pifseed;
 
 	for(;;)
