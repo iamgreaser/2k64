@@ -799,7 +799,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 			// (MULT|DIV)U?
 			case 24: // MULT
-				printf("MULT\n");
+				//printf("MULT\n");
 				{
 					int64_t in_a = (int64_t)(int32_t)C->regs[rs];
 					int64_t in_b = (int64_t)(int32_t)C->regs[rt];
@@ -828,7 +828,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 #endif
 				} break;
 			case 26: // DIV
-				printf("DIV\n");
+				//printf("DIV\n");
 				// TODO: find result of zero division on THIS particular MIPS version
 				// TODO: find out how the hell the remainder is calculated
 				{
@@ -847,7 +847,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 					}
 				} break;
 			case 27: // DIVU
-				printf("DIVU\n");
+				//printf("DIVU\n");
 				{
 					uint32_t in_a = (uint32_t)C->regs[rs];
 					uint32_t in_b = (uint32_t)C->regs[rt];
