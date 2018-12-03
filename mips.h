@@ -338,7 +338,8 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 			uint32_t pmask = T->pagemask;
 			//printf("tlb %2d: %08X %08X %08X %08X\n", i, T->entryhi, T->pagemask, pmask, *addr);
 			if((*addr & ~pmask) != (T->entryhi & ~pmask)) {
-				continue;
+				//continue;
+				break; // checking for TLB shutdowns is slow, fuck that
 			}
 
 			// TLB shutdown check
@@ -409,11 +410,13 @@ enum mipserr MIPSXNAME(_read32_unchecked)(struct MIPSNAME *C, uint64_t addr, uin
 
 enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
-	enum mipserr e = C->f_mem_read(C, addr, 0xFFFF<<(((~addr)&1)<<4), data);
+	uint32_t mask = 0xFFFF<<(((~addr)&2)<<3);
+	enum mipserr e = C->f_mem_read(C, addr, mask, data);
+	//enum mipserr e = C->f_mem_read(C, addr, 0xFFFFFFFF, data);
 	if(e != MER_NONE) {
 		return e;
 	}
-	*data >>= (((~addr)&1)<<4);
+	*data >>= (((~addr)&2)<<3);
 	*data &= 0xFFFF;
 	return e;
 }
@@ -441,7 +444,7 @@ enum mipserr MIPSXNAME(_write16_unchecked)(struct MIPSNAME *C, uint64_t addr, ui
 {
 	data &= 0xFFFF;
 	data |= (data<<16);
-	C->f_mem_write(C, addr, 0xFFFF<<(((~addr)&1)<<4), data);
+	C->f_mem_write(C, addr, 0xFFFF<<(((~addr)&2)<<3), data);
 	return MER_NONE;
 }
 
@@ -464,14 +467,14 @@ enum mipserr MIPSXNAME(_read32l)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 	}
 
 	// Perform read
-	uint32_t shamt = ((~addr)&3U)<<3U;
-	uint32_t omask = 0xFFFFFFFFU<<shamt;
-	uint32_t imask = 0xFFFFFFFFU>>shamt;
+	uint32_t shamt = ((addr)&3U)<<3U;
+	uint32_t omask = 0xFFFFFFFFU>>shamt;
+	uint32_t imask = 0xFFFFFFFFU<<shamt;
 	uint32_t mdata = 0;
 	e = C->f_mem_read(C, addr, imask, &mdata);
-	//printf("L mask %08X %08X %d %08X\n", imask, omask, shamt, mdata);
+	//printf("R mask %08X %08X %d %08X\n", imask, omask, shamt, mdata);
 	if(e == MER_NONE) {
-		*data = (*data & ~omask) | ((mdata<<shamt) & omask);
+		*data = (*data & ~omask) | ((mdata>>shamt) & omask);
 	}
 	MIPSXNAME(_badvaddr_cond_set)(C, e, addr);
 	return e;
@@ -487,12 +490,12 @@ enum mipserr MIPSXNAME(_read32r)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 	}
 
 	// Perform read
-	uint32_t shamt = ((addr)&3U)<<3U;
+	uint32_t shamt = ((~addr)&3U)<<3U;
 	uint32_t omask = 0xFFFFFFFFU>>shamt;
 	uint32_t imask = 0xFFFFFFFFU<<shamt;
 	uint32_t mdata = 0;
 	e = C->f_mem_read(C, addr, imask, &mdata);
-	//printf("R mask %08X %08X %d %08X\n", imask, omask, shamt, mdata);
+	//printf("L mask %08X %08X %d %08X\n", imask, omask, shamt, mdata);
 	if(e == MER_NONE) {
 		*data = (*data & ~omask) | ((mdata>>shamt) & omask);
 	}
@@ -565,9 +568,9 @@ enum mipserr MIPSXNAME(_write32l)(struct MIPSNAME *C, UREG addr, uint32_t data)
 	}
 
 	// Perform write
-	uint32_t shamt = ((~addr)&3U)<<3U;
-	uint32_t omask = 0xFFFFFFFFU>>shamt;
-	C->f_mem_write(C, addr, omask, data>>shamt);
+	uint32_t shamt = ((addr)&3U)<<3U;
+	uint32_t omask = 0xFFFFFFFFU<<shamt;
+	C->f_mem_write(C, addr, omask, data<<shamt);
 	return MER_NONE;
 }
 
@@ -581,7 +584,7 @@ enum mipserr MIPSXNAME(_write32r)(struct MIPSNAME *C, UREG addr, uint32_t data)
 	}
 
 	// Perform write
-	uint32_t shamt = ((addr)&3U)<<3U;
+	uint32_t shamt = ((~addr)&3U)<<3U;
 	uint32_t omask = 0xFFFFFFFFU<<shamt;
 	C->f_mem_write(C, addr, omask, data<<shamt);
 	return MER_NONE;
@@ -773,6 +776,12 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			case 13: // BREAK
 				MIPSXNAME(_throw_exception)(C, op_pc, MER_Bp, op_was_branch);
 				return MER_Bp;
+
+#ifndef MIPS_IS_RSP
+			case 15: // SYNC
+				// No idea how this works sadly
+				break;
+#endif
 
 			// M(F|T)(LO|HI)
 			case 16: // MFHI
@@ -1490,7 +1499,6 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 		// Unaligned loads
 		case 34: // LWL
-			printf("SHIT\n"); fflush(stdout); abort();
 			mdata = C->regs[rt];
 			e = MIPSXNAME(_read32l)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
@@ -1503,7 +1511,6 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			}
 			break;
 		case 38: // LWR
-			printf("SHIT\n"); fflush(stdout); abort();
 			mdata = C->regs[rt];
 			e = MIPSXNAME(_read32r)(C, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op, &mdata);
 			if(e != MER_NONE) {
@@ -1541,7 +1548,6 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 		// Unaligned stores
 		case 42: // SWL
-			printf("SHIT\n"); fflush(stdout); abort();
 			e = MIPSXNAME(_write32l)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
@@ -1549,7 +1555,6 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			}
 			break;
 		case 46: // SWR
-			printf("SHIT\n"); fflush(stdout); abort();
 			e = MIPSXNAME(_write32r)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 			if(e != MER_NONE) {
 				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
@@ -1589,6 +1594,55 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 						v_base, v_vt, v_opcode, v_element, v_offset);
 					MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 					return MER_RI;
+			}
+		} break;
+#endif
+
+#ifndef MIPS_IS_RSP
+		// for some reason krom's tests need these
+
+		case 39: // LWU
+			e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
+			if(e != MER_NONE) {
+				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+				return e;
+			}
+			if(rt != 0) {
+				C->regs[rt] = (SREG)(UREG)(uint32_t)mdata;
+			}
+			break;
+
+		case 55: // LD
+		{
+			uint32_t mdata0, mdata1;
+			e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata0);
+			if(e != MER_NONE) {
+				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+				return e;
+			}
+			e = MIPSXNAME(_read32)(C, C->regs[rs]+4+(SREG)(int16_t)op, &mdata1);
+			if(e != MER_NONE) {
+				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+				return e;
+			}
+			if(rt != 0) {
+				C->regs[rt] = ((SREG)(int32_t)mdata0)<<32;
+				C->regs[rt] |= ((SREG)(UREG)(uint32_t)mdata1);
+			}
+		} break;
+
+		case 63: // SD
+		{
+			// FIXME this is probably wrong
+			e = MIPSXNAME(_write32)(C, C->regs[rs]+(SREG)(int16_t)op, C->regs[rt]>>32);
+			if(e != MER_NONE) {
+				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+				return e;
+			}
+			e = MIPSXNAME(_write32)(C, C->regs[rs]+4+(SREG)(int16_t)op, C->regs[rt]);
+			if(e != MER_NONE) {
+				MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+				return e;
 			}
 		} break;
 #endif

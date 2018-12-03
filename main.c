@@ -8,8 +8,28 @@
 
 #include <time.h>
 
+#include <SDL.h>
+#include <signal.h>
+
+#define DEBUG_DP 1
 #define DEBUG_SP 1
 #define DEBUG_VI 1
+
+#define RAM_TO_FILE 0
+
+#if RAM_TO_FILE
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+int ram_fd = -1;
+#endif
+
+SDL_Window *window;
+SDL_Surface *window_surface;
+SDL_Surface *surface;
+SDL_Renderer *renderer;
 
 uint32_t fullrandu32(void)
 {
@@ -52,7 +72,13 @@ uint64_t fullrandu64(void)
 
 uint32_t pifimg[2*256];
 uint32_t pifmem[2*256];
-uint32_t ram[8*1024*256];
+#define RAM_SIZE_WORDS (8*1024*256)
+#define RAM_SIZE_BYTES (4*RAM_SIZE_WORDS)
+#if RAM_TO_FILE
+uint32_t *ram;
+#else
+uint32_t ram[RAM_SIZE_WORDS];
+#endif
 uint32_t cartmem[64*1024*256];
 
 uint32_t rsp_mem[8*256];
@@ -63,18 +89,26 @@ uint32_t pi_rd_len = 0;
 uint32_t pi_wr_len = 0;
 uint32_t pi_status = 0;
 
+uint32_t vi_status_reg = 0;
+uint32_t vi_origin_reg = 0;
+uint32_t vi_width_reg = 640;
+uint32_t vi_x_scale_reg = 0;
+uint32_t vi_y_scale_reg = 0;
+
 uint32_t pif_boot_flags = 0x00003F00; // 6102
 //uint32_t pif_boot_flags = 0x00009100; // 6105
 
 static struct vr4300 vr4300_baseinst;
 static struct rsp rsp_baseinst;
 
+uint64_t global_clock = 0;
+
 enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data)
 {
 	uint32_t data_out = 0xFFFFFFFFU;
 
 	if(addr <= 0x03EFFFFFU) {
-		data_out = ram[(addr & (sizeof(ram)-1))>>2];
+		data_out = ram[(addr & (RAM_SIZE_BYTES-1))>>2];
 
 	} else if(addr >= 0x10000000U && addr < 0x10000000U+sizeof(cartmem)) {
 		//printf("CART CPU read %016llX\n", addr);
@@ -154,11 +188,28 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 
 	} else if(addr >= 0x04300000 && addr < 0x043FFFFF) {
 #if DEBUG_MI
-#endif
 		printf("MI read %016llX mask %08X\n",
 			(unsigned long long)addr, mask);
+#endif
 		switch(addr)
 		{
+			default:
+				data_out = 0;
+				break;
+		}
+
+	} else if(addr >= 0x04400000 && addr < 0x044FFFFF) {
+#if DEBUG_VI
+		if(addr != 0x04400010) {
+			printf("VI read %016llX mask %08X\n",
+				(unsigned long long)addr, mask);
+		}
+#endif
+		switch(addr)
+		{
+			case 0x04400010:
+				data_out = (global_clock / 6250) % 262;
+				break;
 			default:
 				data_out = 0;
 				break;
@@ -219,7 +270,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	uint32_t *data_out_ptr = NULL;
 
 	if(addr <= 0x03EFFFFFU) {
-		data_out_ptr = &ram[(addr & (sizeof(ram)-1))>>2];
+		data_out_ptr = &ram[(addr & (RAM_SIZE_BYTES-1))>>2];
 
 	} else if(addr >= 0x03F00000 && addr < 0x03FFFFFF) {
 #ifdef DEBUG_RDREG
@@ -322,6 +373,25 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		printf("VI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
+
+		switch(addr)
+		{
+			case 0x04400000: // VI_STATUS_REG
+				vi_status_reg = data & 0x00FFFFFF;
+				break;
+			case 0x04400004: // VI_ORIGIN_REG
+				vi_origin_reg = data & 0x00FFFFFF;
+				break;
+			case 0x04400008: // VI_WIDTH_REG
+				vi_width_reg = data & 0x00000FFF;
+				break;
+			case 0x04400030: // VI_X_SCALE_REG
+				vi_x_scale_reg = data & 0x0FFF0FFF;
+				break;
+			case 0x04400034: // VI_Y_SCALE_REG
+				vi_y_scale_reg = data & 0x0FFF0FFF;
+				break;
+		}
 		return;
 
 	} else if(addr >= 0x04500000 && addr < 0x045FFFFF) {
@@ -365,7 +435,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 #if 0
 		while((pi_wr_len&~3) != 0) {
 			uint32_t data = cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
-			ram[(pi_dram_addr>>2)%(sizeof(ram)/sizeof(uint32_t))] = data;
+			ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = data;
 			//n64primary_mem_read (C, pi_cart_addr, 0xFF<<((~pi_cart_addr)&0x3), &mdata);
 			//n64primary_mem_write(C, pi_dram_addr, 0xFF<<((~pi_dram_addr)&0x3), &mdata);
 			//printf("Copy byte %08X <- %08X\n", pi_dram_addr, pi_cart_addr);
@@ -376,7 +446,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 #endif
 		if(pi_wr_len != 0) {
 			uint32_t *src = &cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
-			uint32_t *dst = &ram[(pi_dram_addr>>2)%(sizeof(ram)/sizeof(uint32_t))];
+			uint32_t *dst = &ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))];
 			memcpy(dst, src, pi_wr_len);
 			pi_wr_len = 0;
 		}
@@ -479,6 +549,31 @@ int main(int argc, char *argv[])
 		cartmem[i] = nv;
 	}
 
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+
+	// Undo SDL's signal stealing bullshit
+	signal(SIGINT,  SIG_DFL);
+	signal(SIGTERM, SIG_DFL);
+
+	window = SDL_CreateWindow("2k64 - <jrra> you literally have a framebuffer you lazy fuck",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		640, 480,
+		0);
+	window_surface = SDL_GetWindowSurface(window);
+	surface = SDL_CreateRGBSurfaceWithFormat(0, 640, 480, 32, SDL_PIXELFORMAT_RGBX8888);
+	renderer = SDL_CreateSoftwareRenderer(window_surface);
+
+#if RAM_TO_FILE
+	ram_fd = open("ram.data", O_RDWR|O_CREAT, 0755);
+	assert(ram_fd >= 3);
+	ftruncate(ram_fd, RAM_SIZE_BYTES);
+	ram = mmap(NULL, RAM_SIZE_BYTES, PROT_READ|PROT_WRITE, MAP_SHARED, ram_fd, 0);
+	assert(ram != (void *)MAP_FAILED);
+	assert(ram != NULL);
+	memset(ram, 0, RAM_SIZE_BYTES);
+#endif
+
 	vr4300_cpu_init(C);
 	rsp_cpu_init(rsp);
 
@@ -532,6 +627,7 @@ int main(int argc, char *argv[])
 				(rsp->pl0_op>>6)&0x1F,
 				(rsp->pl0_op>>0)&0x3F);
 #endif
+
 			if(rsp->c0.n.dma_read_length != 0) {
 				printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
 					rsp->c0.n.dma_cache,
@@ -553,7 +649,7 @@ int main(int argc, char *argv[])
 
 				for(int y = 0; y <= count; y++) {
 					for(int x = 0; x < length>>3; x++) {
-						assert(src+8 <= sizeof(ram));
+						assert(src+8 <= RAM_SIZE_BYTES);
 						assert(dst+8 <= sizeof(rsp_mem));
 						rsp_mem[(dst>>2)+0] = ram[(src>>2)+0];
 						rsp_mem[(dst>>2)+1] = ram[(src>>2)+1];
@@ -569,6 +665,7 @@ int main(int argc, char *argv[])
 				rsp->c0.n.dma_dram = src;
 			}
 		}
+		global_clock += 1;
 #if 0
 		// useful for brute forcing the CIC seed
 		if(C->pl0_op == 0x0411FFFF) {
@@ -589,6 +686,24 @@ int main(int argc, char *argv[])
 			//break;
 		}
 		*/
+
+		if(global_clock % (6250*262) == 0) {
+			printf(" - NEW FRAME - \n");
+			SDL_LockSurface(surface);
+			//printf("%d %d\n", vi_origin_reg, vi_width_reg);
+			for(int y = 0; y < 480; y++) {
+			for(int x = 0; x < 640; x++) {
+				uint32_t offs = vi_origin_reg;
+				offs += y*vi_width_reg*4;
+				offs += x*4;
+				uint32_t data = *(uint32_t *)(((uint8_t *)ram) + offs);
+				((uint32_t *)(surface->pixels + surface->pitch*y))[x] = data;
+			}
+			}
+			SDL_UnlockSurface(surface);
+			SDL_BlitSurface(surface, NULL, window_surface, NULL);
+			SDL_UpdateWindowSurface(window);
+		}
 	}
 
 	printf("EMU END\n");
