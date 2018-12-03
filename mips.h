@@ -1166,6 +1166,11 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 						C->regs[rt] = C->c0.n.badvaddr;
 						SIGNEX32R(C, rt);
 					} break;
+				case 10: // c0_entryhi
+					if(rt != 0) {
+						C->regs[rt] = C->c0.n.entryhi;
+						SIGNEX32R(C, rt);
+					} break;
 				case 12: // c0_sr
 					if(rt != 0) {
 						C->regs[rt] = C->c0.n.sr;
@@ -1385,6 +1390,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
 			return MER_CpU;
 		} else {
+			printf("RI %2u %2u %08X -> %08X %d (COP1)\n"
+				, rs, op&0x3F, op_pc, new_pc, op_was_branch
+				);
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 			return MER_RI;
 		} break;
@@ -1395,6 +1403,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
 			return MER_CpU;
 		} else {
+			printf("RI %2u %2u %08X -> %08X %d (COP2)\n"
+				, rs, op&0x3F, op_pc, new_pc, op_was_branch
+				);
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 			return MER_RI;
 		} break;
@@ -1405,6 +1416,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
 			return MER_CpU;
 		} else {
+			printf("RI %2u %2u %08X -> %08X %d (COP3)\n"
+				, rs, op&0x3F, op_pc, new_pc, op_was_branch
+				);
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 			return MER_RI;
 		} break;
