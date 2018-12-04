@@ -121,6 +121,7 @@ switch(rs) {
 		case 12: // c0_sr
 			C->c0.n.sr &= ~0xFF77FFFF;
 			C->c0.n.sr |= (C->regs[rt] & 0xFF57FFFF);
+			printf("set SR = %08X\n", C->c0.n.sr);
 			e = MIPSXNAME(_probe_interrupts)(C);
 			if(e != MER_NONE) {
 				e_ifetch = e;
@@ -186,7 +187,28 @@ switch(rs) {
 			printf("pagemask %08X\n", C->c0.n.pagemask);
 			printf("idx %d\n", idx);
 		} break;
+
+		case 24: // ERET
+		{
+			printf("ERET start (SR=%08X PC=%08X)\n", C->c0.n.sr, C->pc);
+			if((C->c0.n.sr & C0SR_ERL) != 0) {
+				C->pc = C->c0.n.errorepc;
+				C->c0.n.sr &= ~C0SR_ERL;
+			} else {
+				C->pc = C->c0.n.epc;
+				C->c0.n.sr &= ~C0SR_EXL;
+			}
+			printf("ERET (SR=%08X PC=%08X)\n", C->c0.n.sr, C->pc);
+
+			C->llbit = false;
+
+			// flush pipeline
+			C->pl0_op = 0x00000000;
+			C->pl0_pc = C->pc;
+			C->pl0_is_branch = false;
+		} break;
 #endif
+
 		default:
 			printf("RI op %2u %08X -> %08X %d (COP0)\n"
 				, op&0x3F, op_pc, new_pc, op_was_branch

@@ -126,6 +126,10 @@ struct MIPSNAME
 		} n;
 	} c0;
 
+#ifndef MIPS_IS_RSP
+	bool llbit;
+#endif
+
 #ifdef MIPS_HAS_FPU
 	// FPU regs
 	union {
@@ -214,7 +218,8 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	printf("Throw exception %016llX, cause %d\n", (unsigned long long)epc, ((int)cause)-1);
 
 	for(int i = 0; i < 32; i++) {
-		printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
+		//printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
+		printf("$%s = %016llX | $c0_%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i]);
 	}
 
 #if 0
@@ -255,6 +260,8 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 		C->pc += 0x180;
 	}
 
+	// FIXME there's some special handling here somewhere
+
 	// Set up cause fields
 	C->c0.n.cause &= 0x3000FF00;
 	C->c0.n.cause |= ((((uint32_t)(cause-1))&31)<<2);
@@ -264,8 +271,8 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 		C->c0.n.epc -= 4;
 	}
 
-	// Disable interrupts (IE=0) + enter kernel mode (KUc=0)
-	C->c0.n.sr = (C->c0.n.sr&~0x3F) | ((C->c0.n.sr<<2)&0x3C);
+	// Enter exception mode
+	C->c0.n.sr |= C0SR_EXL;
 #endif
 }
 
@@ -322,7 +329,7 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 
 			if((C->c0.n.sr & C0SR_KSU_mask) != C0SR_KSU_Supervisor
 				|| (*addr & 0xE0000000) != 0xC0000000) {
-				printf("YOU AIN'T THE KERNEL\n");
+				printf("YOU AIN'T THE KERNEL (%016llX -> %08X)\n", C->pl0_pc, C->c0.n.sr);
 				return (is_write ? MER_AdES : MER_AdEL);
 			}
 		}
@@ -348,8 +355,7 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 			uint32_t pmask = T->pagemask;
 			//printf("tlb %2d: %08X %08X %08X %08X\n", i, T->entryhi, T->pagemask, pmask, *addr);
 			if((*addr & ~pmask) != (T->entryhi & ~pmask)) {
-				//continue;
-				break; // checking for TLB shutdowns is slow, fuck that
+				continue;
 			}
 
 			// TLB shutdown check
@@ -371,7 +377,7 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 
 			// Use this index
 			good_tlb = i;
-			//break;
+			break; // checking for TLB shutdowns is slow, fuck that
 		}
 
 		if(good_tlb != -1) {
@@ -804,6 +810,8 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 	if((C->c0.n.random>>8U) < 8U) {
 		C->c0.n.random = 8U<<8U;
 	}
+
+	C->llbit = false;
 #endif
 
 	// perform reset

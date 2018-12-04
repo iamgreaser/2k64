@@ -328,6 +328,36 @@ switch(op>>26U) {
 			} break;
 #endif
 
+#ifndef MIPS_IS_RSP
+		// DS(LL|RL|RA)
+		case 56: // DSLL
+			if(rd != 0) {
+				C->regs[rd] = C->regs[rt] << shamt;
+			} break;
+		case 58: // DSRL
+			if(rd != 0) {
+				C->regs[rd] = (uint64_t)C->regs[rt] >> (uint64_t)shamt;
+			} break;
+		case 59: // DSRA
+			if(rd != 0) {
+				C->regs[rd] = ((int64_t)C->regs[rt]) >> (int64_t)shamt;
+			} break;
+
+		// DS(LL|RL|RA)32
+		case 60: // DSLL32
+			if(rd != 0) {
+				C->regs[rd] = C->regs[rt] << (shamt+32);
+			} break;
+		case 62: // DSRL32
+			if(rd != 0) {
+				C->regs[rd] = (uint64_t)C->regs[rt] >> (uint64_t)(shamt+32);
+			} break;
+		case 63: // DSRA32
+			if(rd != 0) {
+				C->regs[rd] = ((int64_t)C->regs[rt]) >> (int64_t)(shamt+32);
+			} break;
+#endif
+
 		default:
 			// Invalid opcode
 			printf("RI %2u %08X -> %08X %d (special)\n"
@@ -786,7 +816,7 @@ switch(op>>26U) {
 	// CACHE
 	case 47: // CACHE
 		// TODO!
-		if(rt != 8 && rt != 9) {
+		if(rt != 0 && rt != 1 && rt != 8 && rt != 9) {
 			printf("CACHE %2u %08X\n", rt, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op);
 		}
 		break;
