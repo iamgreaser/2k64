@@ -137,6 +137,8 @@ struct MIPSNAME
 		float sf[32][2];
 		double df[32];
 	} c1;
+
+	bool coc1;
 #endif
 
 #ifdef MIPS_IS_RSP

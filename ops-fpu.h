@@ -12,6 +12,28 @@
 		case 6:
 			break;
 
+		// BC1[FT]L?
+		case 8: switch(ft) {
+			// BC1F
+			case 0:
+				if(!C->coc1) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
+					C->pl0_is_branch = true;
+				} break;
+			case 1:
+				if(C->coc1) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
+					C->pl0_is_branch = true;
+				} break;
+
+			default:
+				printf("RI BC1 %2u %08X -> %08X %d (COP1)\n"
+					, ft, op_pc, new_pc, op_was_branch
+					);
+				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+				return MER_RI;
+		} break;
+
 		// S instructions
 		case 16: switch(op&0x3F) {
 			case 0: // ADD.S
@@ -87,6 +109,19 @@
 				break;
 			case 37: // CVT.L.S
 				C->c1.di[fd] = C->c1.sf[fs][0];
+				break;
+
+			case 48: // C.F.S
+				C->coc1 = false;
+				break;
+			case 49: // C.UN.S
+				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0]));
+				break;
+			case 50: // C.EQ.S
+				C->coc1 = (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
+				break;
+			case 51: // C.UEQ.S
+				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
 				break;
 
 			default:
@@ -172,6 +207,19 @@
 				break;
 			case 37: // CVT.L.D
 				C->c1.di[fd] = C->c1.df[fs];
+				break;
+
+			case 48: // C.F.D
+				C->coc1 = false;
+				break;
+			case 49: // C.UN.D
+				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft]));
+				break;
+			case 50: // C.EQ.D
+				C->coc1 = (C->c1.df[fs] == C->c1.df[ft]);
+				break;
+			case 51: // C.UEQ.D
+				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] == C->c1.df[ft]);
 				break;
 
 			default:
