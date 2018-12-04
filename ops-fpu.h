@@ -4,6 +4,14 @@
 	uint32_t ft = (op>>16)&0x1F;
 	switch(rs)
 	{
+		// CFC1
+		case 2:
+			break;
+
+		// CTC1
+		case 6:
+			break;
+
 		// S instructions
 		case 16: switch(op&0x3F) {
 			case 0: // ADD.S

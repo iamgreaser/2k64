@@ -76,7 +76,6 @@ switch(op>>26U) {
 
 		// (MULT|DIV)U?
 		case 24: // MULT
-			//printf("MULT\n");
 			{
 				int64_t in_a = (int64_t)(int32_t)C->regs[rs];
 				int64_t in_b = (int64_t)(int32_t)C->regs[rt];
@@ -105,7 +104,6 @@ switch(op>>26U) {
 #endif
 			} break;
 		case 26: // DIV
-			//printf("DIV\n");
 			// TODO: find result of zero division on THIS particular MIPS version
 			// TODO: find out how the hell the remainder is calculated
 			{
@@ -124,7 +122,6 @@ switch(op>>26U) {
 				}
 			} break;
 		case 27: // DIVU
-			//printf("DIVU\n");
 			{
 				uint32_t in_a = (uint32_t)C->regs[rs];
 				uint32_t in_b = (uint32_t)C->regs[rt];
@@ -138,6 +135,66 @@ switch(op>>26U) {
 					C->rhi = (SREG)(int32_t)rem;
 				}
 			} break;
+
+#ifndef MIPS_IS_RSP
+		// D(MULT|DIV)U?
+		// Using GCC's __int128 b/c can't be arsed right now with a portable approach
+		case 28: // DMULT
+			{
+				__int128 in_a = (__int128)(int64_t)C->regs[rs];
+				__int128 in_b = (__int128)(int64_t)C->regs[rt];
+				__int128 res = in_a * in_b;
+				C->rlo = res&0xFFFFFFFFFFFFFFFFU;
+				C->rhi = res>>64U;
+			} break;
+		case 29: // DMULTU
+			{
+				unsigned __int128 in_a = (unsigned __int128)(uint64_t)C->regs[rs];
+				unsigned __int128 in_b = (unsigned __int128)(uint64_t)C->regs[rt];
+				unsigned __int128 res = in_a * in_b;
+				C->rlo = res&0xFFFFFFFFFFFFFFFFU;
+				C->rhi = res>>64U;
+#if 0
+				printf("DMULTU %016llX * %016llX = %016llX : %016llX\n",
+					in_a,
+					in_b,
+					C->rhi,
+					C->rlo);
+#endif
+			} break;
+		case 30: // DDIV
+			// TODO: find result of zero division on THIS particular MIPS version
+			// TODO: find out how the hell the remainder is calculated
+			{
+				int64_t in_a = (int64_t)C->regs[rs];
+				int64_t in_b = (int64_t)C->regs[rt];
+				if(in_b == 0) {
+					C->rlo = (SREG)(in_a >= 0
+						? (UREG)(SREG)-1
+						: (UREG)1);
+					C->rhi = (SREG)in_a;
+				} else {
+					int64_t quo = in_a / in_b;
+					int64_t rem = in_a % in_b;
+					C->rlo = (SREG)quo;
+					C->rhi = (SREG)rem;
+				}
+			} break;
+		case 31: // DDIVU
+			{
+				uint64_t in_a = (uint64_t)C->regs[rs];
+				uint64_t in_b = (uint64_t)C->regs[rt];
+				if(in_b == 0) {
+					C->rlo = (SREG)-1;
+					C->rhi = (SREG)(int64_t)in_a;
+				} else {
+					uint64_t quo = in_a / in_b;
+					uint64_t rem = in_a % in_b;
+					C->rlo = (SREG)(int64_t)quo;
+					C->rhi = (SREG)(int64_t)rem;
+				}
+			} break;
+#endif
 
 		// (ADD|SUB)U?
 		case 32: // ADD
