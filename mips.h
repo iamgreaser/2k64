@@ -171,7 +171,7 @@ struct MIPSNAME
 #endif
 
 	// hooks
-	enum mipserr (*f_mem_read)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t *data);
+	//enum mipserr (*f_mem_read)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t *data);
 	void (*f_mem_write)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t data);
 };
 
@@ -238,7 +238,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 
 	uint32_t opdata = 0xFFFFFFFF;
 #ifdef MIPS_IS_RSP
-	C->f_mem_read(C, (epc&0x0FFF)|0x1000, 0xFFFFFFFF, &opdata);
+	MIPS_MEM_READ(C, (epc&0x0FFF)|0x1000, 0xFFFFFFFF, &opdata);
 	printf("op refetch = %08X\n", opdata);
 
 	// Halt RSP.
@@ -423,17 +423,17 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 enum mipserr MIPSXNAME(_read32_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
 #ifdef MIPS_IS_RSP
-	return C->f_mem_read(C, addr & 0x00000FFF, 0xFFFFFFFF, data);
+	return MIPS_MEM_READ(C, addr & 0x00000FFF, 0xFFFFFFFF, data);
 #else
-	return C->f_mem_read(C, addr, 0xFFFFFFFF, data);
+	return MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
 #endif
 }
 
 enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
 	uint32_t mask = 0xFFFF<<(((~addr)&2)<<3);
-	enum mipserr e = C->f_mem_read(C, addr, mask, data);
-	//enum mipserr e = C->f_mem_read(C, addr, 0xFFFFFFFF, data);
+	enum mipserr e = MIPS_MEM_READ(C, addr, mask, data);
+	//enum mipserr e = MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
 	if(e != MER_NONE) {
 		return e;
 	}
@@ -445,8 +445,8 @@ enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uin
 enum mipserr MIPSXNAME(_read8_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
 	uint32_t mask = 0xFF<<(((~addr)&3)<<3);
-	enum mipserr e = C->f_mem_read(C, addr, mask, data);
-	//enum mipserr e = C->f_mem_read(C, addr, 0xFFFFFFFF, data);
+	enum mipserr e = MIPS_MEM_READ(C, addr, mask, data);
+	//enum mipserr e = MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
 	if(e != MER_NONE) {
 		return e;
 	}
@@ -492,7 +492,7 @@ enum mipserr MIPSXNAME(_read32l)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 	uint32_t omask = 0xFFFFFFFFU>>shamt;
 	uint32_t imask = 0xFFFFFFFFU<<shamt;
 	uint32_t mdata = 0;
-	e = C->f_mem_read(C, addr, imask, &mdata);
+	e = MIPS_MEM_READ(C, addr, imask, &mdata);
 	//printf("R mask %08X %08X %d %08X\n", imask, omask, shamt, mdata);
 	if(e == MER_NONE) {
 		*data = (*data & ~omask) | ((mdata>>shamt) & omask);
@@ -515,7 +515,7 @@ enum mipserr MIPSXNAME(_read32r)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 	uint32_t omask = 0xFFFFFFFFU>>shamt;
 	uint32_t imask = 0xFFFFFFFFU<<shamt;
 	uint32_t mdata = 0;
-	e = C->f_mem_read(C, addr, imask, &mdata);
+	e = MIPS_MEM_READ(C, addr, imask, &mdata);
 	//printf("L mask %08X %08X %d %08X\n", imask, omask, shamt, mdata);
 	if(e == MER_NONE) {
 		*data = (*data & ~omask) | ((mdata>>shamt) & omask);
@@ -677,7 +677,7 @@ enum mipserr MIPSXNAME(_fetch_op)(struct MIPSNAME *C, uint32_t *data)
 
 #ifdef MIPS_IS_RSP
 	// Special-case the RSP
-	enum mipserr e = C->f_mem_read(C, (addr&0x0FFF)|0x1000, 0xFFFFFFFF, data);
+	enum mipserr e = MIPS_MEM_READ(C, (addr&0x0FFF)|0x1000, 0xFFFFFFFF, data);
 	if(e != MER_NONE) {
 		if(e == MER_DBE) {
 			e = MER_IBE;

@@ -52,11 +52,18 @@ uint64_t fullrandu64(void)
 
 #include "mips-common.h"
 
+struct vr4300;
+struct rsp;
+enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data);
+enum mipserr n64rsp_mem_read(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t *data);
+
 // VR4300 core
 #define MIPS_IS_VR4300
 #define MIPSNAME vr4300
 #define MIPSXNAME(x) vr4300##x
+#define MIPS_MEM_READ n64primary_mem_read
 #include "mips.h"
+#undef MIPS_MEM_READ
 #undef MIPSNAME
 #undef MIPSXNAME
 #undef MIPS_IS_VR4300
@@ -65,7 +72,9 @@ uint64_t fullrandu64(void)
 #define MIPS_IS_RSP
 #define MIPSNAME rsp
 #define MIPSXNAME(x) rsp##x
+#define MIPS_MEM_READ n64rsp_mem_read
 #include "mips.h"
+#undef MIPS_MEM_READ
 #undef MIPSNAME
 #undef MIPSXNAME
 #undef MIPS_IS_RSP
@@ -667,10 +676,10 @@ int main(int argc, char *argv[])
 	printf("new pc: %08X\n", C->pc);
 #endif
 
-	C->f_mem_read  = n64primary_mem_read;
+	//C->f_mem_read  = n64primary_mem_read;
 	C->f_mem_write = n64primary_mem_write;
 
-	rsp->f_mem_read  = n64rsp_mem_read;
+	//rsp->f_mem_read  = n64rsp_mem_read;
 	rsp->f_mem_write = n64rsp_mem_write;
 
 	printf("EMU START\n####################\n\n");
