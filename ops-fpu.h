@@ -78,6 +78,17 @@
 				C->c1.di[fd] = floorf(C->c1.sf[fs][0]);
 				break;
 
+			case 33: // CVT.D.S
+				C->c1.df[fd] = C->c1.sf[fs][0];
+				break;
+
+			case 36: // CVT.W.S
+				C->c1.di[fd] = (SREG)(int32_t)C->c1.sf[fs][0];
+				break;
+			case 37: // CVT.L.S
+				C->c1.di[fd] = C->c1.sf[fs][0];
+				break;
+
 			default:
 				printf("RI %2u %2u %08X -> %08X %d (COP1)\n"
 					, rs, op&0x3F, op_pc, new_pc, op_was_branch
@@ -152,12 +163,43 @@
 				C->c1.di[fd] = floor(C->c1.df[fs]);
 				break;
 
+			case 32: // CVT.S.D
+				C->c1.sf[fd][0] = C->c1.df[fs];
+				break;
+
+			case 36: // CVT.W.D
+				C->c1.di[fd] = (SREG)(int32_t)C->c1.df[fs];
+				break;
+			case 37: // CVT.L.D
+				C->c1.di[fd] = C->c1.df[fs];
+				break;
+
 			default:
 				printf("RI %2u %2u %08X -> %08X %d (COP1)\n"
 					, rs, op&0x3F, op_pc, new_pc, op_was_branch
 					);
 				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 				return MER_RI;
+		} break;
+
+		// W instructions
+		case 20: switch(op&0x3F) {
+			case 32: // CVT.S.W
+				C->c1.sf[fd][0] = (SREG)(int32_t)C->c1.di[fs];
+				break;
+			case 33: // CVT.D.W
+				C->c1.df[fd] = (SREG)(int32_t)C->c1.di[fs];
+				break;
+		} break;
+
+		// L instructions
+		case 21: switch(op&0x3F) {
+			case 32: // CVT.S.L
+				C->c1.sf[fd][0] = (SREG)C->c1.di[fs];
+				break;
+			case 33: // CVT.D.L
+				C->c1.df[fd] = (SREG)C->c1.di[fs];
+				break;
 		} break;
 
 		default:
