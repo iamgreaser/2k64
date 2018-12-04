@@ -47,7 +47,7 @@
 				break;
 
 			case 8: // ROUND.L.S
-				C->c1.di[fd] = roundf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = n64_roundf(C->c1.sf[fs][0]);
 				break;
 
 			case 9: // TRUNC.L.S
@@ -63,7 +63,7 @@
 				break;
 
 			case 12: // ROUND.W.S
-				C->c1.di[fd] = roundf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = n64_roundf(C->c1.sf[fs][0]);
 				break;
 
 			case 13: // TRUNC.W.S
@@ -121,7 +121,7 @@
 				break;
 
 			case 8: // ROUND.L.D
-				C->c1.di[fd] = round(C->c1.df[fs]);
+				C->c1.di[fd] = n64_round(C->c1.df[fs]);
 				break;
 
 			case 9: // TRUNC.L.D
@@ -137,7 +137,7 @@
 				break;
 
 			case 12: // ROUND.W.D
-				C->c1.di[fd] = round(C->c1.df[fs]);
+				C->c1.di[fd] = n64_round(C->c1.df[fs]);
 				break;
 
 			case 13: // TRUNC.W.D

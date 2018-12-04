@@ -50,6 +50,33 @@ uint64_t fullrandu64(void)
 	return v0|(v1<<32U);
 }
 
+// the N64 apparently rounds to zero in case of ambiguity
+float n64_roundf(float v)
+{
+	float tv = truncf(v);
+	float rem = v - tv;
+	if(rem > 0.5f) {
+		return tv + 1;
+	} else if(rem < -0.5f) {
+		return tv - 1;
+	} else {
+		return tv;
+	}
+}
+
+double n64_round(double v)
+{
+	double tv = trunc(v);
+	double rem = v - tv;
+	if(rem > 0.5) {
+		return tv + 1;
+	} else if(rem < -0.5) {
+		return tv - 1;
+	} else {
+		return tv;
+	}
+}
+
 #include "mips-common.h"
 
 struct vr4300;
