@@ -172,7 +172,7 @@ struct MIPSNAME
 
 	// hooks
 	//enum mipserr (*f_mem_read)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t *data);
-	void (*f_mem_write)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t data);
+	//void (*f_mem_write)(struct MIPSNAME *, uint64_t addr, uint32_t mask, uint32_t data);
 };
 
 enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data);
@@ -457,7 +457,7 @@ enum mipserr MIPSXNAME(_read8_unchecked)(struct MIPSNAME *C, uint64_t addr, uint
 
 enum mipserr MIPSXNAME(_write32_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t data)
 {
-	C->f_mem_write(C, addr, 0xFFFFFFFF, data);
+	MIPS_MEM_WRITE(C, addr, 0xFFFFFFFF, data);
 	return MER_NONE;
 }
 
@@ -465,7 +465,7 @@ enum mipserr MIPSXNAME(_write16_unchecked)(struct MIPSNAME *C, uint64_t addr, ui
 {
 	data &= 0xFFFF;
 	data |= (data<<16);
-	C->f_mem_write(C, addr, 0xFFFF<<(((~addr)&2)<<3), data);
+	MIPS_MEM_WRITE(C, addr, 0xFFFF<<(((~addr)&2)<<3), data);
 	return MER_NONE;
 }
 
@@ -474,7 +474,7 @@ enum mipserr MIPSXNAME(_write8_unchecked)(struct MIPSNAME *C, uint64_t addr, uin
 	data &= 0xFF;
 	data |= (data<<8);
 	data |= (data<<16);
-	C->f_mem_write(C, addr, 0xFF<<(((~addr)&3)<<3), data);
+	MIPS_MEM_WRITE(C, addr, 0xFF<<(((~addr)&3)<<3), data);
 	return MER_NONE;
 }
 
@@ -591,7 +591,7 @@ enum mipserr MIPSXNAME(_write32l)(struct MIPSNAME *C, UREG addr, uint32_t data)
 	// Perform write
 	uint32_t shamt = ((addr)&3U)<<3U;
 	uint32_t omask = 0xFFFFFFFFU<<shamt;
-	C->f_mem_write(C, addr, omask, data<<shamt);
+	MIPS_MEM_WRITE(C, addr, omask, data<<shamt);
 	return MER_NONE;
 }
 
@@ -607,7 +607,7 @@ enum mipserr MIPSXNAME(_write32r)(struct MIPSNAME *C, UREG addr, uint32_t data)
 	// Perform write
 	uint32_t shamt = ((~addr)&3U)<<3U;
 	uint32_t omask = 0xFFFFFFFFU<<shamt;
-	C->f_mem_write(C, addr, omask, data<<shamt);
+	MIPS_MEM_WRITE(C, addr, omask, data<<shamt);
 	return MER_NONE;
 }
 
