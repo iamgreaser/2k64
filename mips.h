@@ -2,6 +2,7 @@
 #ifdef MIPS_IS_VR4300
 #define MIPS_VERSION 3
 #define MIPS_MMU_ENTRIES 32
+#define MIPS_HAS_FPU 1
 #endif
 #ifdef MIPS_IS_RSP
 #define MIPS_VERSION 1
@@ -124,6 +125,15 @@ struct MIPSNAME
 #endif
 		} n;
 	} c0;
+
+#ifdef MIPS_HAS_FPU
+	// FPU regs
+	union {
+		uint64_t di[32];
+		float sf[32][2];
+		double df[32];
+	} c1;
+#endif
 
 #ifdef MIPS_IS_RSP
 	// cop2 regs
@@ -811,4 +821,5 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 
 #undef MIPS_VERSION
 #undef MIPS_MMU_ENTRIES
+#undef MIPS_HAS_FPU
 

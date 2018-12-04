@@ -512,11 +512,15 @@ switch(op>>26U) {
 		MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
 		return MER_CpU;
 	} else {
+#ifdef MIPS_HAS_FPU
+#include "ops-fpu.h"
+#else
 		printf("RI %2u %2u %08X -> %08X %d (COP1)\n"
 			, rs, op&0x3F, op_pc, new_pc, op_was_branch
 			);
 		MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 		return MER_RI;
+#endif
 	} break;
 
 	case 18: if((C->c0.n.sr & C0SR_CU(2)) == 0) {
@@ -754,6 +758,60 @@ switch(op>>26U) {
 					v_base, v_vt, v_opcode, v_element, v_offset);
 				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 				return MER_RI;
+		}
+	} break;
+#endif
+
+#ifdef MIPS_HAS_FPU
+	// LWC1
+	case 49: {
+		e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
+		if(e != MER_NONE) {
+			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+			return e;
+		}
+		C->c1.di[rt]  = ((SREG)(int32_t)mdata); // ?
+	} break;
+
+	// LDC1
+	case 53: {
+		uint32_t mdata0, mdata1;
+		e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata0);
+		if(e != MER_NONE) {
+			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+			return e;
+		}
+		e = MIPSXNAME(_read32)(C, C->regs[rs]+4+(SREG)(int16_t)op, &mdata1);
+		if(e != MER_NONE) {
+			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+			return e;
+		}
+
+		C->c1.di[rt]  = ((SREG)(int32_t)mdata0)<<32;
+		C->c1.di[rt] |= ((SREG)(UREG)(uint32_t)mdata1);
+	} break;
+
+	// SWC1
+	case 57: {
+		e = MIPSXNAME(_write32)(C, C->regs[rs]+(SREG)(int16_t)op, C->c1.di[rt]);
+		if(e != MER_NONE) {
+			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+			return e;
+		}
+	} break;
+
+	// SDC1
+	case 61: {
+		// FIXME this is probably wrong
+		e = MIPSXNAME(_write32)(C, C->regs[rs]+(SREG)(int16_t)op, C->c1.di[rt]>>32);
+		if(e != MER_NONE) {
+			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+			return e;
+		}
+		e = MIPSXNAME(_write32)(C, C->regs[rs]+4+(SREG)(int16_t)op, C->c1.di[rt]);
+		if(e != MER_NONE) {
+			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
+			return e;
 		}
 	} break;
 #endif
