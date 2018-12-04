@@ -299,6 +299,11 @@ void MIPSXNAME(_badvaddr_cond_set)(struct MIPSNAME *C, enum mipserr e, UREG addr
 		case MER_Mod:
 		case MER_TLBL:
 		case MER_TLBS:
+#ifndef MIPS_IS_RSP
+			C->c0.n.context &= ~0x003FFFF0;
+			C->c0.n.context = (addr>>(13-4)) & 0x003FFFF0;
+			C->c0.n.context = (SREG)(int32_t)C->c0.n.context;
+#endif
 		case MER_AdEL:
 		case MER_AdES:
 #ifndef MIPS_IS_RSP

@@ -71,17 +71,19 @@ uint64_t fullrandu64(void)
 #undef MIPS_IS_RSP
 
 uint32_t pifimg[2*256];
-uint32_t pifmem[2*256];
 #define RAM_SIZE_WORDS (8*1024*256)
 #define RAM_SIZE_BYTES (4*RAM_SIZE_WORDS)
 #if RAM_TO_FILE
 uint32_t *ram;
+uint32_t *rsp_mem;
+uint32_t *pifmem;
 #else
 uint32_t ram[RAM_SIZE_WORDS];
+uint32_t rsp_mem[8*256];
+uint32_t pifmem[2*256];
 #endif
 uint32_t cartmem[64*1024*256];
 
-uint32_t rsp_mem[8*256];
 
 uint32_t pi_dram_addr = 0;
 uint32_t pi_cart_addr = 0;
@@ -102,7 +104,7 @@ struct {
 } cic_boot_codes[] = {
 	{
 		"6102",
-		0x00003F00,
+		0x00003F3F,
 		{
 			0x40, 0x80, 0x68, 0x00, 0x40, 0x80, 0x48, 0x00,
 			0x40, 0x80, 0x58, 0x00, 0x3c, 0x08, 0xa4, 0x70,
@@ -110,7 +112,7 @@ struct {
 	},
 	{
 		"6105",
-		0x00009100,
+		0x00009191,
 		{
 			0x03, 0xa0, 0x48, 0x20, 0x8d, 0x28, 0xf0, 0x10,
 			0x8d, 0x6a, 0x00, 0x44, 0x01, 0x48, 0x50, 0x26,
@@ -127,8 +129,12 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 {
 	uint32_t data_out = 0xFFFFFFFFU;
 
-	if(addr <= 0x03EFFFFFU) {
-		data_out = ram[(addr & (RAM_SIZE_BYTES-1))>>2];
+	if(addr < RAM_SIZE_BYTES) {
+		//data_out = ram[(addr & (RAM_SIZE_BYTES-1))>>2];
+		data_out = ram[addr>>2];
+
+	} else if(addr <= 0x03EFFFFFU) {
+		data_out = 0x00000000;
 
 	} else if(addr >= 0x10000000U && addr < 0x10000000U+sizeof(cartmem)) {
 		//printf("CART CPU read %016llX\n", addr);
@@ -136,7 +142,7 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		assert(addr-0x10000000U < sizeof(cartmem));
 		data_out = cartmem[(addr-0x10000000U)>>2];
 
-	} else if(addr >= 0x1FC00000U && addr < 0x1FC00000U+sizeof(pifmem)) {
+	} else if(addr >= 0x1FC00000U && addr < 0x1FC00000U+4*2*256) {
 		data_out = pifmem[(addr-0x1FC00000U)>>2];
 
 		if((addr&0x7FF) >= 0x7C0) {
@@ -257,6 +263,9 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 #endif
 		switch(addr)
 		{
+			case 0x04700010:
+				data_out = 0;
+				break;
 			default:
 				data_out = 0;
 				break;
@@ -274,6 +283,14 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 				break;
 		}
 
+	} else if(addr >= 0x05000000U && addr < 0x05FFFFFFU) {
+#if DEBUG_SI
+		printf("CartDom2Addr1 read %016llX mask %08X\n",
+			(unsigned long long)addr, mask);
+#endif
+		data_out = 0;
+
+
 	} else {
 		printf("buserr %08X (%016llX)\n", addr, (unsigned long long)C->pc);
 		printf("(%016llX)\n", (unsigned long long)C->regs[31]);
@@ -289,8 +306,23 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	uint32_t data_in = data & mask;
 	uint32_t *data_out_ptr = NULL;
 
-	if(addr <= 0x03EFFFFFU) {
-		data_out_ptr = &ram[(addr & (RAM_SIZE_BYTES-1))>>2];
+	if(addr == 0x00000318) {
+		//if(C->pl0_pc != 0xFFFFFFFFA400039CULL) {
+		{
+		// FIXME: DETECT EXPANSION PAK PROPERLY
+		data = 8*1024*1024;
+		//printf("DEBUG ABORT: %08X (%016llX)\n", data, C->pl0_pc);
+		//fsync(ram_fd);
+		//abort();
+		}
+	}
+
+	if(addr < RAM_SIZE_BYTES) {
+		//data_out_ptr = &ram[(addr & (RAM_SIZE_BYTES-1))>>2];
+		data_out_ptr = &ram[addr>>2];
+
+	} else if(addr <= 0x03EFFFFFU) {
+		return;
 
 	} else if(addr >= 0x03F00000 && addr < 0x03FFFFFF) {
 #ifdef DEBUG_RDREG
@@ -488,7 +520,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 #endif
 		return;
 
-	} else if(addr >= 0x1FC007C0U && addr < 0x1FC00000U+sizeof(pifmem)) {
+	} else if(addr >= 0x1FC007C0U && addr < 0x1FC00000U+4*2*256) {
 		data_out_ptr = &pifmem[((addr&0x3F)+0x7C0)>>2];
 		printf("PIF RAM write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
@@ -537,6 +569,18 @@ int main(int argc, char *argv[])
 	srand((unsigned int)time(NULL));
 
 	printf("EMU INIT\n");
+
+#if RAM_TO_FILE
+	ram_fd = open("ram.data", O_RDWR|O_CREAT, 0755);
+	assert(ram_fd >= 3);
+	ftruncate(ram_fd, RAM_SIZE_BYTES + 4*(8*256 + 2*256));
+	ram = mmap(NULL, RAM_SIZE_BYTES + 4*(8*256 + 2*256), PROT_READ|PROT_WRITE, MAP_SHARED, ram_fd, 0);
+	assert(ram != (void *)MAP_FAILED);
+	assert(ram != NULL);
+	rsp_mem = ram + RAM_SIZE_WORDS;
+	pifmem = rsp_mem + 8*256;
+	memset(ram, 0, RAM_SIZE_BYTES);
+#endif
 
 	fp = fopen(argv[1], "rb");
 	size_t pif_len = fread(pifimg, 1, sizeof(pifimg), fp);
@@ -602,16 +646,6 @@ int main(int argc, char *argv[])
 	surface = SDL_CreateRGBSurfaceWithFormat(0, 640, 480, 32, SDL_PIXELFORMAT_RGBX8888);
 	renderer = SDL_CreateSoftwareRenderer(window_surface);
 
-#if RAM_TO_FILE
-	ram_fd = open("ram.data", O_RDWR|O_CREAT, 0755);
-	assert(ram_fd >= 3);
-	ftruncate(ram_fd, RAM_SIZE_BYTES);
-	ram = mmap(NULL, RAM_SIZE_BYTES, PROT_READ|PROT_WRITE, MAP_SHARED, ram_fd, 0);
-	assert(ram != (void *)MAP_FAILED);
-	assert(ram != NULL);
-	memset(ram, 0, RAM_SIZE_BYTES);
-#endif
-
 	vr4300_cpu_init(C);
 	rsp_cpu_init(rsp);
 
@@ -641,6 +675,7 @@ int main(int argc, char *argv[])
 
 	printf("EMU START\n####################\n\n");
 
+	pifmem[0x7E4>>2] = pifseed;
 	pifmem[0x7E4>>2] = pifseed;
 
 	for(;;)
@@ -681,7 +716,7 @@ int main(int argc, char *argv[])
 				for(int y = 0; y <= count; y++) {
 					for(int x = 0; x < length>>3; x++) {
 						assert(src+8 <= RAM_SIZE_BYTES);
-						assert(dst+8 <= sizeof(rsp_mem));
+						assert(dst+8 <= 0x2000);
 						rsp_mem[(dst>>2)+0] = ram[(src>>2)+0];
 						rsp_mem[(dst>>2)+1] = ram[(src>>2)+1];
 						dst += 8;

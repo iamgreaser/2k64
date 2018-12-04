@@ -27,6 +27,11 @@ switch(rs) {
 			break;
 
 #else
+		case 4: // c0_context
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.context;
+				SIGNEX32R(C, rt);
+			} break;
 		case 8: // c0_badvaddr
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.badvaddr;
@@ -92,30 +97,38 @@ switch(rs) {
 			break;
 
 		case 2: // c0_entrylo0
-			C->c0.n.entrylo0 = C->regs[rt];
+			C->c0.n.entrylo0 = (SREG)(int32_t)C->regs[rt];
 			break;
 		case 3: // c0_entrylo1
-			C->c0.n.entrylo1 = C->regs[rt];
+			C->c0.n.entrylo1 = (SREG)(int32_t)C->regs[rt];
+			break;
+
+		case 4: // c0_context
+			C->c0.n.context = (SREG)(int32_t)(C->regs[rt] & 0xFFFFFFF0);
 			break;
 
 		case 5: // c0_pagemask
 			C->c0.n.pagemask = (C->regs[rt] & 0x01FFE000)|0x1FFF;
 			break;
 
+		case 6: // c0_wired
+			C->c0.n.wired = C->regs[rt] & 0x3F;
+			break;
+
 		case 8: // c0_badvaddr
-			C->c0.n.badvaddr = C->regs[rt];
+			C->c0.n.badvaddr = (SREG)(int32_t)C->regs[rt];
 			break;
 
 		case 9: // c0_count
-			C->c0.n.count = C->regs[rt];
+			C->c0.n.count = (SREG)(int32_t)C->regs[rt];
 			break;
 
 		case 10: // c0_entryhi
-			C->c0.n.entryhi = C->regs[rt];
+			C->c0.n.entryhi = (SREG)(int32_t)C->regs[rt];
 			break;
 
 		case 11: // c0_compare
-			C->c0.n.compare = C->regs[rt];
+			C->c0.n.compare = (SREG)(int32_t)C->regs[rt];
 			break;
 
 		case 12: // c0_sr
@@ -172,9 +185,13 @@ switch(rs) {
 		case 6: // TLBWR
 		{
 			// FIXME: we should calculate c0_random properly
+			int wired = C->c0.n.wired;
 			int idx = ((op&4) == 0
 				? C->c0.n.index
 				: fullrandu32());
+			if((op&4) != 0) {
+				idx = (idx-wired) % (32-wired) + wired;
+			}
 			idx &= (MIPS_MMU_ENTRIES-1);
 
 			C->tlb[idx].entrylo[0] = C->c0.n.entrylo0;
