@@ -38,6 +38,38 @@
 				C->c1.sf[fd][0] = -C->c1.sf[fs][0];
 				break;
 
+			case 8: // ROUND.L.S
+				C->c1.di[fd] = roundf(C->c1.sf[fs][0]);
+				break;
+
+			case 9: // TRUNC.L.S
+				C->c1.di[fd] = truncf(C->c1.sf[fs][0]);
+				break;
+
+			case 10: // CEIL.L.S
+				C->c1.di[fd] = ceilf(C->c1.sf[fs][0]);
+				break;
+
+			case 11: // FLOOR.L.S
+				C->c1.di[fd] = floorf(C->c1.sf[fs][0]);
+				break;
+
+			case 12: // ROUND.W.S
+				C->c1.di[fd] = roundf(C->c1.sf[fs][0]);
+				break;
+
+			case 13: // TRUNC.W.S
+				C->c1.di[fd] = truncf(C->c1.sf[fs][0]);
+				break;
+
+			case 14: // CEIL.W.S
+				C->c1.di[fd] = ceilf(C->c1.sf[fs][0]);
+				break;
+
+			case 15: // FLOOR.W.S
+				C->c1.di[fd] = floorf(C->c1.sf[fs][0]);
+				break;
+
 			default:
 				printf("RI %2u %2u %08X -> %08X %d (COP1)\n"
 					, rs, op&0x3F, op_pc, new_pc, op_was_branch
@@ -78,6 +110,38 @@
 
 			case 7: // NEG.D
 				C->c1.df[fd] = -C->c1.df[fs];
+				break;
+
+			case 8: // ROUND.L.D
+				C->c1.di[fd] = round(C->c1.df[fs]);
+				break;
+
+			case 9: // TRUNC.L.D
+				C->c1.di[fd] = trunc(C->c1.df[fs]);
+				break;
+
+			case 10: // CEIL.L.D
+				C->c1.di[fd] = ceil(C->c1.df[fs]);
+				break;
+
+			case 11: // FLOOR.L.D
+				C->c1.di[fd] = floor(C->c1.df[fs]);
+				break;
+
+			case 12: // ROUND.W.D
+				C->c1.di[fd] = round(C->c1.df[fs]);
+				break;
+
+			case 13: // TRUNC.W.D
+				C->c1.di[fd] = trunc(C->c1.df[fs]);
+				break;
+
+			case 14: // CEIL.W.D
+				C->c1.di[fd] = ceil(C->c1.df[fs]);
+				break;
+
+			case 15: // FLOOR.W.D
+				C->c1.di[fd] = floor(C->c1.df[fs]);
 				break;
 
 			default:
