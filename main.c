@@ -764,7 +764,7 @@ int main(int argc, char *argv[])
 						dst += 8;
 						src += 8;
 						dst &= 0x1FF8;
-						src &= 0x1FF8;
+						src &= RAM_SIZE_BYTES-8;
 					}
 					dst += skip;
 				}
