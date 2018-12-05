@@ -231,12 +231,17 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		}
 
 	} else if(addr >= 0x04080000U && addr < 0x0408FFFFU) {
+		struct rsp *rsp = &rsp_baseinst;
+
 #if DEBUG_SP
 		printf("SP8 read %016llX mask %08X\n",
 			(unsigned long long)addr, mask);
 #endif
 		switch(addr)
 		{
+			case 0x04080000:
+				data_out = rsp->pc & 0xFFF;
+				break;
 			default:
 				data_out = 0;
 				break;
@@ -442,6 +447,13 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		printf("SP8 write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
+
+		switch(addr)
+		{
+			case 0x04080000:
+				rsp->pc = data & 0xFFF;
+				break;
+		}
 
 		return;
 
@@ -767,6 +779,7 @@ int main(int argc, char *argv[])
 						src &= RAM_SIZE_BYTES-8;
 					}
 					dst += skip;
+					dst &= 0x1FF8;
 				}
 				rsp->c0.n.dma_read_length = 0;
 				rsp->c0.n.dma_cache = dst;

@@ -51,8 +51,14 @@ switch(op>>26U) {
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_Syscall, op_was_branch);
 			return MER_Syscall;
 		case 13: // BREAK
+#ifdef MIPS_IS_RSP
+			C->c0.n.sp_status |= 0x02; // broke
+			C->c0.n.sp_status |= 0x01; // halt
+			return MER_Bp;
+#else
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_Bp, op_was_branch);
 			return MER_Bp;
+#endif
 
 #ifndef MIPS_IS_RSP
 		case 15: // SYNC
@@ -749,6 +755,7 @@ switch(op>>26U) {
 		break;
 
 	// Unaligned loads
+#ifndef MIPS_IS_RSP
 	case 34: // LWL
 		mdata = C->regs[rt];
 		e = MIPSXNAME(_read32l)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
@@ -773,6 +780,7 @@ switch(op>>26U) {
 			SIGNEX32R(C, rt);
 		}
 		break;
+#endif
 
 	// Basic stores
 	case 40: // SB
@@ -798,6 +806,7 @@ switch(op>>26U) {
 		break;
 
 	// Unaligned stores
+#ifndef MIPS_IS_RSP
 	case 42: // SWL
 		e = MIPSXNAME(_write32l)(C, C->regs[rs]+(SREG)(int32_t)(int16_t)op, C->regs[rt]);
 		if(e != MER_NONE) {
@@ -812,6 +821,7 @@ switch(op>>26U) {
 			return e;
 		}
 		break;
+#endif
 
 	// CACHE
 	case 47: // CACHE

@@ -425,14 +425,16 @@ enum mipserr MIPSXNAME(_calc_addr)(struct MIPSNAME *C, UREG *addr, bool is_write
 enum mipserr MIPSXNAME(_read32_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
 #ifdef MIPS_IS_RSP
-	return MIPS_MEM_READ(C, addr & 0x00000FFF, 0xFFFFFFFF, data);
-#else
-	return MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
+	addr &= 0xFFF;
 #endif
+	return MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
 }
 
 enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
+#ifdef MIPS_IS_RSP
+	addr &= 0xFFF;
+#endif
 	uint32_t mask = 0xFFFF<<(((~addr)&2)<<3);
 	enum mipserr e = MIPS_MEM_READ(C, addr, mask, data);
 	//enum mipserr e = MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
@@ -446,6 +448,9 @@ enum mipserr MIPSXNAME(_read16_unchecked)(struct MIPSNAME *C, uint64_t addr, uin
 
 enum mipserr MIPSXNAME(_read8_unchecked)(struct MIPSNAME *C, uint64_t addr, uint32_t *data)
 {
+#ifdef MIPS_IS_RSP
+	addr &= 0xFFF;
+#endif
 	uint32_t mask = 0xFF<<(((~addr)&3)<<3);
 	enum mipserr e = MIPS_MEM_READ(C, addr, mask, data);
 	//enum mipserr e = MIPS_MEM_READ(C, addr, 0xFFFFFFFF, data);
@@ -480,6 +485,7 @@ enum mipserr MIPSXNAME(_write8_unchecked)(struct MIPSNAME *C, uint64_t addr, uin
 	return MER_NONE;
 }
 
+#ifndef MIPS_IS_RSP
 enum mipserr MIPSXNAME(_read32l)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 {
 	// Get address
@@ -525,6 +531,7 @@ enum mipserr MIPSXNAME(_read32r)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 	MIPSXNAME(_badvaddr_cond_set)(C, e, addr);
 	return e;
 }
+#endif
 
 enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 {
@@ -581,6 +588,7 @@ enum mipserr MIPSXNAME(_read8)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 	return e;
 }
 
+#ifndef MIPS_IS_RSP
 enum mipserr MIPSXNAME(_write32l)(struct MIPSNAME *C, UREG addr, uint32_t data)
 {
 	// Get address
@@ -612,6 +620,7 @@ enum mipserr MIPSXNAME(_write32r)(struct MIPSNAME *C, UREG addr, uint32_t data)
 	MIPS_MEM_WRITE(C, addr, omask, data<<shamt);
 	return MER_NONE;
 }
+#endif
 
 enum mipserr MIPSXNAME(_write32)(struct MIPSNAME *C, UREG addr, uint32_t data)
 {
@@ -719,7 +728,11 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 	assert(C->regs[0] == 0);
 
+#ifdef MIPS_IS_RSP
+	C->pc &= 0xFFF;
+#else
 	C->pc = (SREG)(int32_t)C->pc;
+#endif
 
 	// Fetch op
 	uint32_t op = C->pl0_op;
