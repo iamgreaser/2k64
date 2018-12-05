@@ -561,6 +561,9 @@ switch(op>>26U) {
 		uint32_t vs = ((op>>11)&0x1F);
 		uint32_t vt = ((op>>16)&0x1F);
 		uint32_t el = ((op>>21)&0xF);
+		uint32_t elbeg = elparamtab[el][0];
+		uint32_t elend = elparamtab[el][1];
+		uint32_t elstep = elparamtab[el][2];
 #include "ops-rsp.h"
 	} break;
 

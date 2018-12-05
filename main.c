@@ -26,6 +26,29 @@
 int ram_fd = -1;
 #endif
 
+const uint8_t elparamtab[16][4] = {
+	// beg, end, step, (pad)
+	{0, 7, 1, 0,},
+	{0, 7, 0, 0,}, // TODO: FIND WHAT THIS DOES
+
+	{0, 7, 2, 0,},
+	{1, 7, 2, 0,},
+
+	{0, 7, 4, 0,},
+	{1, 7, 4, 0,},
+	{2, 7, 4, 0,},
+	{3, 7, 4, 0,},
+
+	{0, 7, 8, 0,},
+	{1, 7, 8, 0,},
+	{2, 7, 8, 0,},
+	{3, 7, 8, 0,},
+	{4, 7, 8, 0,},
+	{5, 7, 8, 0,},
+	{6, 7, 8, 0,},
+	{7, 7, 8, 0,},
+};
+
 SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Surface *surface;
