@@ -60,6 +60,7 @@ switch(rs) {
 				printf("VADD %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] + (int32_t)(int16_t)C->c2.h[vt][i] + ((C->cc2.n.vco>>i)&1);
+					C->c2acc[0][i] = r&0xFFFF;
 					if(r > 0x7FFF) {
 						C->c2.h[vd][i] = 0x7FFF;
 					} else if(r < -0x8000) {
@@ -76,6 +77,7 @@ switch(rs) {
 				C->cc2.n.vco = 0;
 				for(int i = 0; i < 8; i++) {
 					uint32_t r = C->c2.h[vs][i] + C->c2.h[vt][i];
+					C->c2acc[0][i] = (uint16_t)(uint32_t)r;
 					if(r >= 0x10000) {
 						C->cc2.n.vco |=  (1<<i);
 					}
@@ -85,6 +87,34 @@ switch(rs) {
 
 			case 29: // VSAR
 				printf("VSAR %2u %2u %2u %X\n", vd, vs, vt, el);
+				switch(el)
+				{
+
+					case 0x8:
+						for(int i = 0; i < 8; i++) {
+							C->c2.h[vd][i] = C->c2acc[2][i];
+							C->c2acc[2][i] = C->c2.h[vs][i];
+						}
+						break;
+					case 0x9:
+						for(int i = 0; i < 8; i++) {
+							C->c2.h[vd][i] = C->c2acc[1][i];
+							C->c2acc[1][i] = C->c2.h[vs][i];
+						}
+						break;
+					case 0xA:
+						for(int i = 0; i < 8; i++) {
+							C->c2.h[vd][i] = C->c2acc[0][i];
+							C->c2acc[0][i] = C->c2.h[vs][i];
+						}
+						break;
+
+					default:
+						printf("UNHANDLED VSAR EL CASE %2u %2u %2u %X\n", vd, vs, vt, el);
+						fflush(stdout);
+						abort();
+						break;
+				}
 				break;
 
 			default:

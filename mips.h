@@ -149,6 +149,10 @@ struct MIPSNAME
 		uint32_t w[32][4];
 		uint64_t d[32][2];
 	} c2;
+
+	// cop2 accumulator
+	uint16_t c2acc[3][8];
+
 	// cop2 control regs
 	union {
 		uint32_t i[32];
