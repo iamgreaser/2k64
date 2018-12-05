@@ -148,6 +148,16 @@ switch(rs) {
 				}
 				break;
 
+			case 55:
+				// VNOP
+				printf("VNOP\n");
+				break;
+
+			case 63:
+				// VNULL
+				printf("VNULL\n");
+				break;
+
 			default:
 				printf("RI op %2u %08X -> %08X %d (COP2)\n"
 					, op&0x3F, op_pc, new_pc, op_was_branch
