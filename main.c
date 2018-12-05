@@ -394,16 +394,16 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		switch(addr)
 		{
 			case 0x04040000: // DMA_CACHE
-				printf("DMA_CACHE %08X\n", data);
 				rsp->c0.n.dma_cache = data & 0x1FFF;
+				printf("DMA_CACHE %08X\n", data);
 				break;
 			case 0x04040004: // DMA_DRAM
-				printf("DMA_DRAM %08X\n", data);
 				rsp->c0.n.dma_dram = data & 0xFFFFFF;
+				printf("DMA_DRAM %08X\n", data);
 				break;
 			case 0x04040008: // DMA_READ_LENGTH
-				printf("DMA_READ_LENGTH %08X\n", data);
 				rsp->c0.n.dma_read_length = data;
+				printf("DMA_READ_LENGTH %08X\n", data);
 				break;
 			case 0x04040010:
 				if((data & 0x00000001) != 0) { rsp->c0.n.sp_status &= ~0x0001; }
@@ -751,46 +751,47 @@ int main(int argc, char *argv[])
 					(rsp->pl0_op>>0)&0x3F);
 			}
 #endif
+		}
 
-			if(rsp->c0.n.dma_read_length != 0) {
-				printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
-					rsp->c0.n.dma_cache,
-					rsp->c0.n.dma_dram,
-					rsp->c0.n.dma_read_length);
+		if(rsp->c0.n.dma_read_length != 0) {
+			printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
+				rsp->c0.n.dma_cache,
+				rsp->c0.n.dma_dram,
+				rsp->c0.n.dma_read_length);
 
-				int length = rsp->c0.n.dma_read_length & 0xFFF;
-				int count = (rsp->c0.n.dma_read_length>>12) & 0xFF;
-				int skip = (rsp->c0.n.dma_read_length>>20) & 0xFFF;
-				int dst = rsp->c0.n.dma_cache;
-				int src = rsp->c0.n.dma_dram;
+			int length = rsp->c0.n.dma_read_length & 0xFFF;
+			int count = (rsp->c0.n.dma_read_length>>12) & 0xFF;
+			int skip = (rsp->c0.n.dma_read_length>>20) & 0xFFF;
+			int dst = rsp->c0.n.dma_cache;
+			int src = rsp->c0.n.dma_dram;
 
-				length += 7; length &= ~7;
+			length += 7; length &= ~7;
 
-				assert((dst & 0x7) == 0);
-				assert((src & 0x7) == 0);
-				assert((length & 0x7) == 0);
-				assert((skip & 0x7) == 0);
+			assert((dst & 0x7) == 0);
+			assert((src & 0x7) == 0);
+			assert((length & 0x7) == 0);
+			assert((skip & 0x7) == 0);
 
-				for(int y = 0; y <= count; y++) {
-					for(int x = 0; x < length>>3; x++) {
-						assert(src+8 <= RAM_SIZE_BYTES);
-						assert(dst+8 <= 0x2000);
-						rsp_mem[(dst>>2)+0] = ram[(src>>2)+0];
-						rsp_mem[(dst>>2)+1] = ram[(src>>2)+1];
-						dst += 8;
-						src += 8;
-						dst &= 0x1FF8;
-						src &= RAM_SIZE_BYTES-8;
-					}
-					dst += skip;
+			for(int y = 0; y <= count; y++) {
+				for(int x = 0; x < length>>3; x++) {
+					assert(src+8 <= RAM_SIZE_BYTES);
+					assert(dst+8 <= 0x2000);
+					rsp_mem[(dst>>2)+0] = ram[(src>>2)+0];
+					rsp_mem[(dst>>2)+1] = ram[(src>>2)+1];
+					dst += 8;
+					src += 8;
 					dst &= 0x1FF8;
+					src &= RAM_SIZE_BYTES-8;
 				}
-				rsp->c0.n.dma_read_length = 0;
-				rsp->c0.n.dma_cache = dst;
-				rsp->c0.n.dma_dram = src;
+				dst += skip;
+				dst &= 0x1FF8;
 			}
+			rsp->c0.n.dma_read_length = 0;
+			rsp->c0.n.dma_cache = dst;
+			rsp->c0.n.dma_dram = src;
 		}
 		global_clock += 1;
+
 #if 0
 		// useful for brute forcing the CIC seed
 		if(C->pl0_op == 0x0411FFFF) {

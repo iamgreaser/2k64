@@ -149,6 +149,15 @@ struct MIPSNAME
 		uint32_t w[32][4];
 		uint64_t d[32][2];
 	} c2;
+	// cop2 control regs
+	union {
+		uint32_t i[32];
+		struct {
+			uint32_t vco;
+			uint32_t vcc;
+			uint32_t vce;
+		} n;
+	} cc2;
 
 	// RSP special
 	bool rsp_intr;
@@ -221,7 +230,11 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 
 	for(int i = 0; i < 32; i++) {
 		//printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
+#ifdef MIPS_IS_RSP
+		printf("$%s = %08X | $c0_%-2d = %08X | $v%-2d = %016llX%016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c2.d[i][0], C->c2.d[i][1]);
+#else
 		printf("$%s = %016llX | $c0_%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i]);
+#endif
 	}
 
 #if 0

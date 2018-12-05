@@ -550,50 +550,18 @@ switch(op>>26U) {
 		return MER_CpU;
 	} else
 #endif
+	{
 #include "ops-cop0.h"
-		break;
+	} break;
 
 #ifdef MIPS_IS_RSP
 	// COP2
-	case 18:
-	switch(rs) {
-		case 0: // MFCz
-		switch(rd) {
-			default:
-				printf("RI MFC2 %2u %08X -> %08X %d (COP2)\n"
-					, rd, op_pc, new_pc, op_was_branch
-					);
-				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
-				return MER_RI;
-		} break;
-
-		case 4: // MTCz
-		switch(rd) {
-			default:
-				printf("RI MTC2 %2u %08X -> %08X %d (COP2)\n"
-					, rd, op_pc, new_pc, op_was_branch
-					);
-				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
-				return MER_RI;
-		} break;
-
-		case 16: switch(op&0x3F) {
-
-			default:
-				printf("RI op %2u %08X -> %08X %d (COP2)\n"
-					, op&0x3F, op_pc, new_pc, op_was_branch
-					);
-				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
-				return MER_RI;
-
-		} break;
-
-		default:
-			printf("RI %2u %2u %08X -> %08X %d (COP2)\n"
-				, rs, op&0x3F, op_pc, new_pc, op_was_branch
-				);
-			MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
-			return MER_RI;
+	case 18: {
+		uint32_t vd = ((op>> 6)&0x1F);
+		uint32_t vs = ((op>>11)&0x1F);
+		uint32_t vt = ((op>>16)&0x1F);
+		uint32_t el = ((op>>21)&0xF);
+#include "ops-rsp.h"
 	} break;
 
 
@@ -843,15 +811,44 @@ switch(op>>26U) {
 		{
 			// LQV
 			case 4: {
+				printf("LQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
 				assert(v_element == 0);
-				C->c2.w[v_vt][0] = v_base;
-				C->c2.w[v_vt][1] = v_base;
-				C->c2.w[v_vt][2] = v_base;
-				C->c2.w[v_vt][3] = v_base;
+				// FIXME this is wrong
+				MIPSXNAME(_read32)(C, C->regs[v_base]+0+(v_offset<<4), &C->c2.w[v_vt][0]);
+				MIPSXNAME(_read32)(C, C->regs[v_base]+4+(v_offset<<4), &C->c2.w[v_vt][1]);
+				MIPSXNAME(_read32)(C, C->regs[v_base]+8+(v_offset<<4), &C->c2.w[v_vt][2]);
+				MIPSXNAME(_read32)(C, C->regs[v_base]+12+(v_offset<<4), &C->c2.w[v_vt][3]);
 			} break;
 
 			default:
 				printf("RSP load op %2d %2d %2d %2d %2d\n",
+					v_base, v_vt, v_opcode, v_element, v_offset);
+				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
+				return MER_RI;
+		}
+	} break;
+
+	// RSP vector unit op (normally SWC2)
+	case 58: {
+		uint32_t v_base = (op>>21)&0x1F;
+		uint32_t v_vt = (op>>16)&0x1F;
+		uint32_t v_opcode = (op>>11)&0x1F;
+		uint32_t v_element = (op>>7)&0xF;
+		uint32_t v_offset = (uint32_t)(((int32_t)(op<<25))>>25);
+		switch(v_opcode)
+		{
+			// SQV
+			case 4: {
+				// FIXME this is wrong
+				printf("SQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				MIPSXNAME(_write32)(C, C->regs[v_base]+0+(v_offset<<4), C->c2.w[v_vt][0]);
+				MIPSXNAME(_write32)(C, C->regs[v_base]+4+(v_offset<<4), C->c2.w[v_vt][1]);
+				MIPSXNAME(_write32)(C, C->regs[v_base]+8+(v_offset<<4), C->c2.w[v_vt][2]);
+				MIPSXNAME(_write32)(C, C->regs[v_base]+12+(v_offset<<4), C->c2.w[v_vt][3]);
+			} break;
+
+			default:
+				printf("RSP store op %2d %2d %2d %2d %2d\n",
 					v_base, v_vt, v_opcode, v_element, v_offset);
 				MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
 				return MER_RI;
