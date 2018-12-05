@@ -154,7 +154,7 @@ struct {
 	},
 	{
 		"6105",
-		0x00009191,
+		0x0000913F,
 		{
 			0x03, 0xa0, 0x48, 0x20, 0x8d, 0x28, 0xf0, 0x10,
 			0x8d, 0x6a, 0x00, 0x44, 0x01, 0x48, 0x50, 0x26,
@@ -452,6 +452,8 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		{
 			case 0x04080000:
 				rsp->pc = data & 0xFFF;
+				//rsp->pl0_pc = (data-4) & 0xFFF;
+				rsp->pl0_op = 0;
 				break;
 		}
 
@@ -739,13 +741,15 @@ int main(int argc, char *argv[])
 		if((rsp->c0.n.sp_status & 0x00000001) == 0x00000000) {
 			enum mipserr e_rsp = rsp_run_op(rsp);
 #if 0
-			printf("RSP op %08X: %08X %02X %2d %2d %2d %2d %02X\n", rsp->pl0_pc, rsp->pl0_op,
-				(rsp->pl0_op>>26)&0x3F,
-				(rsp->pl0_op>>21)&0x1F,
-				(rsp->pl0_op>>16)&0x1F,
-				(rsp->pl0_op>>11)&0x1F,
-				(rsp->pl0_op>>6)&0x1F,
-				(rsp->pl0_op>>0)&0x3F);
+			if(rsp->pl0_op != 0) {
+				printf("RSP op %08X: %08X %2d %2d %2d %2d %2d %2d\n", rsp->pl0_pc, rsp->pl0_op,
+					(rsp->pl0_op>>26)&0x3F,
+					(rsp->pl0_op>>21)&0x1F,
+					(rsp->pl0_op>>16)&0x1F,
+					(rsp->pl0_op>>11)&0x1F,
+					(rsp->pl0_op>>6)&0x1F,
+					(rsp->pl0_op>>0)&0x3F);
+			}
 #endif
 
 			if(rsp->c0.n.dma_read_length != 0) {
@@ -760,7 +764,7 @@ int main(int argc, char *argv[])
 				int dst = rsp->c0.n.dma_cache;
 				int src = rsp->c0.n.dma_dram;
 
-				length += 1; length &= ~7;
+				length += 7; length &= ~7;
 
 				assert((dst & 0x7) == 0);
 				assert((src & 0x7) == 0);
