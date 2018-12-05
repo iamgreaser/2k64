@@ -123,6 +123,18 @@
 			case 51: // C.UEQ.S
 				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
 				break;
+			case 52: // C.OLT.S
+				C->coc1 = (C->c1.sf[fs][0] < C->c1.sf[ft][0]);
+				break;
+			case 53: // C.ULT.S
+				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] < C->c1.sf[ft][0]);
+				break;
+			case 54: // C.OLE.S
+				C->coc1 = (C->c1.sf[fs][0] <= C->c1.sf[ft][0]);
+				break;
+			case 55: // C.ULE.S
+				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] <= C->c1.sf[ft][0]);
+				break;
 
 			default:
 				printf("RI %2u %2u %08X -> %08X %d (COP1)\n"
@@ -220,6 +232,18 @@
 				break;
 			case 51: // C.UEQ.D
 				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] == C->c1.df[ft]);
+				break;
+			case 52: // C.OLT.D
+				C->coc1 = (C->c1.df[fs] < C->c1.df[ft]);
+				break;
+			case 53: // C.ULT.D
+				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] < C->c1.df[ft]);
+				break;
+			case 54: // C.OLE.D
+				C->coc1 = (C->c1.df[fs] <= C->c1.df[ft]);
+				break;
+			case 55: // C.ULE.D
+				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] <= C->c1.df[ft]);
 				break;
 
 			default:
