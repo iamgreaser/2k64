@@ -88,6 +88,21 @@ switch(rs) {
 				C->cc2.n.vco = 0;
 				break;
 
+			case 19: // VABS
+				printf("VABS %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = elbeg; i <= elend; i+=elstep) {
+					int32_t r = (int16_t)C->c2.h[vt][i];
+					int32_t s = (int16_t)C->c2.h[vs][i];
+					if(s < 0) {
+						r = -r;
+					} else if(s == 0) {
+						r = 0;
+					}
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
 			case 20: // VADDC
 				printf("VADDC %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vco = 0;
@@ -145,6 +160,15 @@ switch(rs) {
 						fflush(stdout);
 						abort();
 						break;
+				}
+				break;
+
+			case 51: // VMOV
+				printf("VMOV %2u %2u %2u %X\n", vd, vs, vt, el);
+				{
+					int32_t r = (int16_t)C->c2.h[vt][el&0x7];
+					C->c2acc[0][vs&0x7] = r;
+					C->c2.h[vd][vs&0x7] = r;
 				}
 				break;
 
