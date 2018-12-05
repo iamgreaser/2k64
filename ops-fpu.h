@@ -1,3 +1,20 @@
+// TODO: set cause and throw exception!
+#define TRAP_ON_NAN_FS_FT_S { \
+	if(isnan(C->c1.sf[fs][0]) || isnan(C->c1.sf[ft][0])) { \
+		printf("TODO: TRAP ON NaN\n"); \
+		fflush(stdout); \
+		abort(); \
+	} \
+}
+
+#define TRAP_ON_NAN_FS_FT_D { \
+	if(isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) { \
+		printf("TODO: TRAP ON NaN\n"); \
+		fflush(stdout); \
+		abort(); \
+	} \
+}
+
 {
 	uint32_t fd = (op>>6)&0x1F;
 	uint32_t fs = (op>>11)&0x1F;
@@ -111,27 +128,43 @@
 				C->c1.di[fd] = C->c1.sf[fs][0];
 				break;
 
+			case 56: // C.SF.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 48: // C.F.S
 				C->coc1 = false;
 				break;
+			case 57: // C.NGLE.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 49: // C.UN.S
 				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0]));
 				break;
+			case 58: // C.SEQ.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 50: // C.EQ.S
 				C->coc1 = (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
 				break;
+			case 59: // C.NGL.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 51: // C.UEQ.S
 				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
 				break;
+			case 60: // C.LT.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 52: // C.OLT.S
 				C->coc1 = (C->c1.sf[fs][0] < C->c1.sf[ft][0]);
 				break;
+			case 61: // C.NGE.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 53: // C.ULT.S
 				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] < C->c1.sf[ft][0]);
 				break;
+			case 62: // C.LE.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 54: // C.OLE.S
 				C->coc1 = (C->c1.sf[fs][0] <= C->c1.sf[ft][0]);
 				break;
+			case 63: // C.NGT.S
+				TRAP_ON_NAN_FS_FT_S;
 			case 55: // C.ULE.S
 				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] <= C->c1.sf[ft][0]);
 				break;
@@ -221,27 +254,43 @@
 				C->c1.di[fd] = C->c1.df[fs];
 				break;
 
+			case 56: // C.SF.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 48: // C.F.D
 				C->coc1 = false;
 				break;
+			case 57: // C.NGLE.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 49: // C.UN.D
 				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft]));
 				break;
+			case 58: // C.SEQ.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 50: // C.EQ.D
 				C->coc1 = (C->c1.df[fs] == C->c1.df[ft]);
 				break;
+			case 59: // C.NGL.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 51: // C.UEQ.D
 				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] == C->c1.df[ft]);
 				break;
+			case 60: // C.LT.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 52: // C.OLT.D
 				C->coc1 = (C->c1.df[fs] < C->c1.df[ft]);
 				break;
+			case 61: // C.NGE.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 53: // C.ULT.D
 				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] < C->c1.df[ft]);
 				break;
+			case 62: // C.LE.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 54: // C.OLE.D
 				C->coc1 = (C->c1.df[fs] <= C->c1.df[ft]);
 				break;
+			case 63: // C.NGT.D
+				TRAP_ON_NAN_FS_FT_D;
 			case 55: // C.ULE.D
 				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] <= C->c1.df[ft]);
 				break;
