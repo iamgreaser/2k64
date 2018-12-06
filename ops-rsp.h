@@ -168,6 +168,78 @@ switch(rs) {
 				}
 				break;
 
+			case 32: // VLT
+				printf("VLT %2u %2u %2u %X\n", vd, vs, vt, el);
+				C->cc2.n.vcc = 0;
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i];
+					if((int16_t)C->c2.h[vs][i] < (int16_t)C->c2.h[vt][j]) {
+						C->cc2.n.vcc |= 0x001<<i;
+					} else {
+						r = C->c2.h[vt][j];
+					}
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				C->cc2.n.vco = 0;
+				C->cc2.n.vce = 0;
+				break;
+
+			case 33: // VEQ
+				printf("VEQ %2u %2u %2u %X\n", vd, vs, vt, el);
+				C->cc2.n.vcc &= ~0xFF;
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i];
+					if(C->c2.h[vs][i] == C->c2.h[vt][j]) {
+						C->cc2.n.vcc |= 0x001<<i;
+					} else {
+						r = C->c2.h[vt][j];
+					}
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				C->cc2.n.vco = 0;
+				C->cc2.n.vce = 0;
+				break;
+
+			case 34: // VNE
+				printf("VNE %2u %2u %2u %X\n", vd, vs, vt, el);
+				C->cc2.n.vcc = 0;
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i];
+					if(C->c2.h[vs][i] != C->c2.h[vt][j]) {
+						C->cc2.n.vcc |= 0x001<<i;
+					} else {
+						r = C->c2.h[vt][j];
+					}
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				C->cc2.n.vco = 0;
+				C->cc2.n.vce = 0;
+				break;
+
+			case 35: // VGE
+				printf("VGE %2u %2u %2u %X\n", vd, vs, vt, el);
+				C->cc2.n.vcc = 0;
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i];
+					if((int16_t)C->c2.h[vs][i] >= (int16_t)C->c2.h[vt][j]) {
+						C->cc2.n.vcc |= 0x001<<i;
+					} else {
+						r = C->c2.h[vt][j];
+					}
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				C->cc2.n.vco = 0;
+				C->cc2.n.vce = 0;
+				break;
+
 			case 40: // VAND
 				printf("VAND %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
