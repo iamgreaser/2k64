@@ -817,10 +817,22 @@ switch(op>>26U) {
 				printf("LQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
 				assert(v_element == 0);
 				// FIXME this is wrong
-				MIPSXNAME(_read32)(C, C->regs[v_base]+0+(v_offset<<4), &C->c2.w[v_vt][0]);
-				MIPSXNAME(_read32)(C, C->regs[v_base]+4+(v_offset<<4), &C->c2.w[v_vt][1]);
-				MIPSXNAME(_read32)(C, C->regs[v_base]+8+(v_offset<<4), &C->c2.w[v_vt][2]);
-				MIPSXNAME(_read32)(C, C->regs[v_base]+12+(v_offset<<4), &C->c2.w[v_vt][3]);
+				MIPSXNAME(_read16)(C, C->regs[v_base]+0+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][0] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+2+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][1] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+4+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][2] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+6+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][3] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+8+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][4] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+10+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][5] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+12+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][6] = mdata;
+				MIPSXNAME(_read16)(C, C->regs[v_base]+14+(v_offset<<4), &mdata);
+				C->c2.h[v_vt][7] = mdata;
 			} break;
 
 			default:
@@ -844,10 +856,14 @@ switch(op>>26U) {
 			case 4: {
 				// FIXME this is wrong
 				printf("SQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
-				MIPSXNAME(_write32)(C, C->regs[v_base]+0+(v_offset<<4), C->c2.w[v_vt][0]);
-				MIPSXNAME(_write32)(C, C->regs[v_base]+4+(v_offset<<4), C->c2.w[v_vt][1]);
-				MIPSXNAME(_write32)(C, C->regs[v_base]+8+(v_offset<<4), C->c2.w[v_vt][2]);
-				MIPSXNAME(_write32)(C, C->regs[v_base]+12+(v_offset<<4), C->c2.w[v_vt][3]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+0+(v_offset<<4), C->c2.h[v_vt][0]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+2+(v_offset<<4), C->c2.h[v_vt][1]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+4+(v_offset<<4), C->c2.h[v_vt][2]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+6+(v_offset<<4), C->c2.h[v_vt][3]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+8+(v_offset<<4), C->c2.h[v_vt][4]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+10+(v_offset<<4), C->c2.h[v_vt][5]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+12+(v_offset<<4), C->c2.h[v_vt][6]);
+				MIPSXNAME(_write16)(C, C->regs[v_base]+14+(v_offset<<4), C->c2.h[v_vt][7]);
 			} break;
 
 			default:

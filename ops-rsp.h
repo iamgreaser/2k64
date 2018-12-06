@@ -169,11 +169,13 @@ switch(rs) {
 				break;
 
 			case 51: // VMOV
-				printf("VMOV %2u %2u %2u %X\n", vd, vs, vt, el);
+				printf("VMOV %2u[%2u] %2u[%2u]\n", vd, vs, vt, el);
 				{
-					int32_t r = (int16_t)C->c2.h[vt][el&0x7];
-					C->c2acc[0][vs&0x7] = r;
+					uint16_t r = (uint16_t)C->c2.h[vt][el&0x7];
 					C->c2.h[vd][vs&0x7] = r;
+					for(int i = 0; i < 8; i++) {
+						C->c2acc[0][i] = C->c2.h[vt][i];
+					}
 				}
 				break;
 
