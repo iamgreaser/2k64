@@ -168,6 +168,66 @@ switch(rs) {
 				}
 				break;
 
+			case 40: // VAND
+				printf("VAND %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i] & C->c2.h[vt][j];
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
+			case 41: // VNAND
+				printf("VNAND %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = ~(C->c2.h[vs][i] & C->c2.h[vt][j]);
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
+			case 42: // VOR
+				printf("VOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i] | C->c2.h[vt][j];
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
+			case 43: // VNOR
+				printf("VNOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = ~(C->c2.h[vs][i] | C->c2.h[vt][j]);
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
+			case 44: // VXOR
+				printf("VXOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i] ^ C->c2.h[vt][j];
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
+			case 45: // VNXOR
+				printf("VNXOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = ~(C->c2.h[vs][i] ^ C->c2.h[vt][j]);
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
 			case 51: // VMOV
 				printf("VMOV %2u[%2u] %2u[%2u]\n", vd, vs, vt, el);
 				{
