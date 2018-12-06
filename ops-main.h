@@ -80,6 +80,7 @@ switch(op>>26U) {
 			C->rlo = C->regs[rd];
 			break;
 
+#ifndef MIPS_IS_RSP
 		// (MULT|DIV)U?
 		case 24: // MULT
 			{
@@ -141,6 +142,7 @@ switch(op>>26U) {
 					C->rhi = (SREG)(int32_t)rem;
 				}
 			} break;
+#endif
 
 #ifndef MIPS_IS_RSP
 		// D(MULT|DIV)U?
@@ -375,50 +377,25 @@ switch(op>>26U) {
 
 	// REGIMM
 	case 1: switch(rt) {
-		case 0: // BLTZ
-			if(((SREG)C->regs[rs]) < 0) {
-				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
-				C->pl0_is_branch = true;
-			} break;
-		case 1: // BGEZ
-			if(((SREG)C->regs[rs]) >= 0) {
-				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
-				C->pl0_is_branch = true;
-			} break;
-
-#if 1
-		case 2: // BLTZL
-			if(((SREG)C->regs[rs]) < 0) {
-				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
-				C->pl0_is_branch = true;
-			} else {
-				new_op = 0;
-			} break;
-		case 3: // BGEZL
-			if(((SREG)C->regs[rs]) >= 0) {
-				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
-				C->pl0_is_branch = true;
-			} else {
-				new_op = 0;
-			} break;
-#endif
-
 		case 16: // BLTZAL
 			C->regs[31] = op_pc + 8;
+		case 0: // BLTZ
 			if(((SREG)C->regs[rs]) < 0) {
 				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} break;
 		case 17: // BGEZAL
 			C->regs[31] = op_pc + 8;
+		case 1: // BGEZ
 			if(((SREG)C->regs[rs]) >= 0) {
 				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
 			} break;
 
-#if 1
+#ifndef MIPS_IS_RSP
 		case 18: // BLTZALL
 			C->regs[31] = op_pc + 8;
+		case 2: // BLTZL
 			if(((SREG)C->regs[rs]) < 0) {
 				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;
@@ -427,6 +404,7 @@ switch(op>>26U) {
 			} break;
 		case 19: // BGEZALL
 			C->regs[31] = op_pc + 8;
+		case 3: // BGEZL
 			if(((SREG)C->regs[rs]) >= 0) {
 				C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 				C->pl0_is_branch = true;

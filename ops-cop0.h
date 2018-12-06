@@ -141,7 +141,7 @@ switch(rs) {
 		case 12: // c0_sr
 			C->c0.n.sr &= ~0xFF77FFFF;
 			C->c0.n.sr |= (C->regs[rt] & 0xFF57FFFF);
-			printf("set SR = %08X\n", C->c0.n.sr);
+			printf("set SR = %08X (pc=%016llX)\n", C->c0.n.sr, C->pc);
 			e = MIPSXNAME(_probe_interrupts)(C);
 			if(e != MER_NONE) {
 				e_ifetch = e;

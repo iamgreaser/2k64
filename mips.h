@@ -324,9 +324,9 @@ void MIPSXNAME(_badvaddr_cond_set)(struct MIPSNAME *C, enum mipserr e, UREG addr
 		case MER_TLBL:
 		case MER_TLBS:
 #ifndef MIPS_IS_RSP
-			C->c0.n.context &= ~0x003FFFF0;
-			C->c0.n.context = (addr>>(13-4)) & 0x003FFFF0;
-			C->c0.n.context = (SREG)(int32_t)C->c0.n.context;
+			C->c0.n.context &= ~0x007FFFF0;
+			C->c0.n.context |= (addr>>(13-4)) & 0x007FFFF0;
+			C->c0.n.context |= (SREG)(int32_t)C->c0.n.context;
 			C->c0.n.entryhi &= 0x1FFF;
 			C->c0.n.entryhi |= addr & ~0x1FFF;
 #endif
@@ -840,7 +840,7 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 	C->c0.n.random &= 0x00003F00;
 	C->c0.n.entrylo0 &= 0xFFFFFF00;
 	C->c0.n.entrylo1 &= 0xFFFFFF00;
-	C->c0.n.context &= 0xFFFFFFFC;
+	C->c0.n.context &= 0xFFFFFFF0;
 	C->c0.n.entryhi &= 0xFFFFFFC0;
 	C->c0.n.sr &= 0xF27FFF3F;
 	C->c0.n.cause &= 0xB800037C;
