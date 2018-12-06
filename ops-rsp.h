@@ -58,8 +58,9 @@ switch(rs) {
 
 			case 16: // VADD
 				printf("VADD %2u %2u %2u %X\n", vd, vs, vt, el);
-				for(int i = elbeg; i <= elend; i+=elstep) {
-					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] + (int32_t)(int16_t)C->c2.h[vt][i] + ((C->cc2.n.vco>>i)&1);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] + (int32_t)(int16_t)C->c2.h[vt][j] + ((C->cc2.n.vco>>i)&1);
 					C->c2acc[0][i] = r&0xFFFF;
 					if(r > 0x7FFF) {
 						C->c2.h[vd][i] = 0x7FFF;
@@ -74,8 +75,9 @@ switch(rs) {
 
 			case 17: // VSUB
 				printf("VSUB %2u %2u %2u %X\n", vd, vs, vt, el);
-				for(int i = elbeg; i <= elend; i+=elstep) {
-					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] - (int32_t)(int16_t)C->c2.h[vt][i] - ((C->cc2.n.vco>>(i+8))&1);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] - (int32_t)(int16_t)C->c2.h[vt][j] - ((C->cc2.n.vco>>(i+8))&1);
 					C->c2acc[0][i] = r&0xFFFF;
 					if(r > 0x7FFF) {
 						C->c2.h[vd][i] = 0x7FFF;
@@ -90,8 +92,9 @@ switch(rs) {
 
 			case 19: // VABS
 				printf("VABS %2u %2u %2u %X\n", vd, vs, vt, el);
-				for(int i = elbeg; i <= elend; i+=elstep) {
-					int32_t r = (int16_t)C->c2.h[vt][i];
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = (int16_t)C->c2.h[vt][j];
 					int32_t s = (int16_t)C->c2.h[vs][i];
 					if(s < 0) {
 						r = -r;
@@ -106,8 +109,9 @@ switch(rs) {
 			case 20: // VADDC
 				printf("VADDC %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vco = 0;
-				for(int i = elbeg; i <= elend; i+=elstep) {
-					uint32_t r = C->c2.h[vs][i] + C->c2.h[vt][i];
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					uint32_t r = C->c2.h[vs][i] + C->c2.h[vt][j];
 					C->c2acc[0][i] = (uint16_t)(uint32_t)r;
 					if(r >= 0x10000) {
 						C->cc2.n.vco |=  (1<<i);
@@ -119,8 +123,9 @@ switch(rs) {
 			case 21: // VSUBC
 				printf("VSUBC %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vco = 0;
-				for(int i = elbeg; i <= elend; i+=elstep) {
-					int32_t r = C->c2.h[vs][i] - C->c2.h[vt][i];
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t r = C->c2.h[vs][i] - C->c2.h[vt][j];
 					C->c2acc[0][i] = (uint16_t)(uint32_t)r;
 					if(r < 0) {
 						C->cc2.n.vco |= (0x101<<i);
