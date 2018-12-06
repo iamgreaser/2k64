@@ -221,8 +221,16 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 			(unsigned long long)addr, mask);
 		switch(addr)
 		{
-			case 0x03F0000C:
-				data_out = 0xFFFFFFFF;
+			case 0x03F00000: // DEVICE_TYPE
+				data_out = 0xB4190010;
+				break;
+
+			case 0x03F00008: // DELAY
+				data_out = 0x2B3B1A0B;
+				break;
+
+			case 0x03F00018: // RAS_INTERVAL
+				data_out = 0x101C0A04;
 				break;
 
 			default:
