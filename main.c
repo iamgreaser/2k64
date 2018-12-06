@@ -890,16 +890,7 @@ int main(int argc, char *argv[])
 		if(global_clock % (6250*262) == 0) {
 			printf(" - NEW FRAME - \n");
 			SDL_LockSurface(surface);
-			//printf("%d %d\n", vi_origin_reg, vi_width_reg);
-			for(int y = 0; y < 480; y++) {
-			for(int x = 0; x < 640; x++) {
-				uint32_t offs = vi_origin_reg;
-				offs += y*vi_width_reg*4;
-				offs += x*4;
-				uint32_t data = *(uint32_t *)(((uint8_t *)ram) + offs);
-				((uint32_t *)(surface->pixels + surface->pitch*y))[x] = data;
-			}
-			}
+#include "vi-render.h"
 			SDL_UnlockSurface(surface);
 			SDL_BlitSurface(surface, NULL, window_surface, NULL);
 			SDL_UpdateWindowSurface(window);
