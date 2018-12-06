@@ -227,8 +227,10 @@ switch(rs) {
 			C->llbit = false;
 
 			// flush pipeline
-			C->pl0_op = 0x00000000;
-			C->pl0_pc = C->pc;
+			//C->pl0_op = 0x00000000;
+			//C->pl0_pc = C->pc;
+			new_op = 0x00000000;
+			new_pc = C->pc;
 			C->pl0_is_branch = false;
 		} break;
 #endif

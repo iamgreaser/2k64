@@ -287,16 +287,20 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	// FIXME there's some special handling here somewhere
 
 	// Set up cause fields
-	C->c0.n.cause &= 0x3000FF00;
+	C->c0.n.cause &= 0xB000FF00;
 	C->c0.n.cause |= ((((uint32_t)(cause-1))&31)<<2);
-	if(bd) {
-		// Branch delay slots have special treatment
-		C->c0.n.cause |= (1<<31);
-		C->c0.n.epc -= 4;
+	if((C->c0.n.sr & C0SR_EXL) != 0) {
+		C->c0.n.cause &= ~(1<<31);
+		if(bd) {
+			// Branch delay slots have special treatment
+			C->c0.n.cause |= (1<<31);
+			C->c0.n.epc -= 4;
+		}
 	}
 
 	// Enter exception mode
 	C->c0.n.sr |= C0SR_EXL;
+	printf("new PC = %08X\n", C->pc);
 #endif
 }
 
