@@ -88,9 +88,16 @@ switch(rs) {
 			printf("DMA_READ_LENGTH %08X\n", C->regs[rt]);
 			C->c0.n.dma_read_length = C->regs[rt];
 			break;
-		//case 3: // DMA_WRITE_LENGTH
-			//C->c0.n.dma_write_length = C->regs[rt];
-			//break;
+		case 3: // DMA_WRITE_LENGTH
+			printf("DMA_WRITE_LENGTH %08X\n", C->regs[rt]);
+			C->c0.n.dma_write_length = C->regs[rt];
+			break;
+
+		case 11: // CMD_STATUS
+			printf("CMD_STATUS %08X\n", C->regs[rt]);
+			//C->c0.n.cmd_status = C->regs[rt];
+			break;
+
 #else
 		case 0: // c0_index
 			C->c0.n.index = C->regs[rt] & 63;

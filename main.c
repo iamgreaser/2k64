@@ -428,6 +428,10 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				rsp->c0.n.dma_read_length = data;
 				printf("DMA_READ_LENGTH %08X\n", data);
 				break;
+			case 0x0404000C: // DMA_WRITE_LENGTH
+				rsp->c0.n.dma_write_length = data;
+				printf("DMA_WRITE_LENGTH %08X\n", data);
+				break;
 			case 0x04040010:
 				if((data & 0x00000001) != 0) { rsp->c0.n.sp_status &= ~0x0001; }
 				if((data & 0x00000002) != 0) { rsp->c0.n.sp_status |=  0x0001; }
@@ -776,6 +780,44 @@ int main(int argc, char *argv[])
 #endif
 		}
 
+		if(rsp->c0.n.dma_write_length != 0) {
+			printf("RSP DMA write RSP=%08X -> MEM=%08X len %08X\n",
+				rsp->c0.n.dma_cache,
+				rsp->c0.n.dma_dram,
+				rsp->c0.n.dma_write_length);
+
+			int length = rsp->c0.n.dma_write_length & 0xFFF;
+			int count = (rsp->c0.n.dma_write_length>>12) & 0xFF;
+			int skip = (rsp->c0.n.dma_write_length>>20) & 0xFFF;
+			int src = rsp->c0.n.dma_cache;
+			int dst = rsp->c0.n.dma_dram;
+
+			length += 7; length &= ~7;
+
+			assert((src & 0x7) == 0);
+			assert((dst & 0x7) == 0);
+			assert((length & 0x7) == 0);
+			assert((skip & 0x7) == 0);
+
+			for(int y = 0; y <= count; y++) {
+				for(int x = 0; x < length>>3; x++) {
+					assert(dst+8 <= RAM_SIZE_BYTES);
+					assert(src+8 <= 0x2000);
+					ram[(dst>>2)+0] = rsp_mem[(src>>2)+0];
+					ram[(dst>>2)+1] = rsp_mem[(src>>2)+1];
+					src += 8;
+					dst += 8;
+					src &= 0x1FF8;
+					dst &= RAM_SIZE_BYTES-8;
+				}
+				src += skip;
+				src &= 0x1FF8;
+			}
+			rsp->c0.n.dma_write_length = 0;
+			rsp->c0.n.dma_cache = src;
+			rsp->c0.n.dma_dram = dst;
+		}
+
 		if(rsp->c0.n.dma_read_length != 0) {
 			printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
 				rsp->c0.n.dma_cache,
@@ -813,6 +855,7 @@ int main(int argc, char *argv[])
 			rsp->c0.n.dma_cache = dst;
 			rsp->c0.n.dma_dram = src;
 		}
+
 		global_clock += 1;
 
 #if 0

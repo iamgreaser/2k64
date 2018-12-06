@@ -55,7 +55,7 @@ struct MIPSNAME
 			UREG _08; // 8
 			UREG _09; // 9
 			UREG _10; // 10
-			UREG _11; // 11
+			UREG cmd_status; // 11
 
 			UREG _12; // 12
 			UREG _13; // 13
@@ -269,12 +269,17 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	//fflush(stdout); abort();
 
 	// Set up PC + op
-	C->c0.n.epc = epc;
+	if((C->c0.n.sr & C0SR_EXL) == 0) {
+		C->c0.n.epc = epc;
+	}
 	C->pl0_op = 0x00000000;
 	C->pc = ((C->c0.n.sr & C0SR_BEV) != 0 ? 0xBFC00200 : 0x80000000);
 	C->pc = (SREG)(int32_t)C->pc;
 	if(cause == MER_TLBL || cause == MER_TLBS) {
 		// TODO: XTLB
+		if((C->c0.n.sr & C0SR_EXL) != 0) {
+			C->pc += 0x180;
+		}
 	} else {
 		C->pc += 0x180;
 	}
@@ -322,6 +327,8 @@ void MIPSXNAME(_badvaddr_cond_set)(struct MIPSNAME *C, enum mipserr e, UREG addr
 			C->c0.n.context &= ~0x003FFFF0;
 			C->c0.n.context = (addr>>(13-4)) & 0x003FFFF0;
 			C->c0.n.context = (SREG)(int32_t)C->c0.n.context;
+			C->c0.n.entryhi &= 0x1FFF;
+			C->c0.n.entryhi |= addr & ~0x1FFF;
 #endif
 		case MER_AdEL:
 		case MER_AdES:
