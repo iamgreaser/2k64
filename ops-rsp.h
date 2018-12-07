@@ -58,7 +58,7 @@ switch(rs) {
 		switch(op&0x3F) {
 
 			case 0: // VMULF
-				printf("VMULF %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMULF %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
@@ -81,7 +81,7 @@ switch(rs) {
 				break;
 
 			case 1: // VMULU
-				printf("VMULU %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMULU %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
@@ -106,7 +106,7 @@ switch(rs) {
 				break;
 
 			case 4: // VMUDL
-				printf("VMUDL %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMUDL %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t r = (uint64_t)(uint16_t)C->c2.h[vs][i] * (uint64_t)(uint16_t)C->c2.h[vt][j];
@@ -128,7 +128,7 @@ switch(rs) {
 				break;
 
 			case 5: // VMUDM
-				printf("VMUDM %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMUDM %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (uint64_t)(uint16_t)C->c2.h[vt][j];
@@ -149,7 +149,7 @@ switch(rs) {
 				break;
 
 			case 6: // VMUDN
-				printf("VMUDN %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMUDN %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t r = (uint64_t)(uint16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
@@ -170,7 +170,7 @@ switch(rs) {
 				break;
 
 			case 7: // VMUDH
-				printf("VMUDH %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMUDH %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
@@ -192,7 +192,7 @@ switch(rs) {
 				break;
 
 			case 8: // VMACF
-				printf("VMACF %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMACF %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
@@ -216,7 +216,7 @@ switch(rs) {
 				break;
 
 			case 9: // VMACU
-				printf("VMACU %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMACU %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
@@ -240,7 +240,7 @@ switch(rs) {
 				break;
 
 			case 12: // VMADL
-				printf("VMADL %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMADL %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
@@ -264,7 +264,7 @@ switch(rs) {
 				break;
 
 			case 13: // VMADM
-				printf("VMADM %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMADM %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
@@ -287,7 +287,7 @@ switch(rs) {
 				break;
 
 			case 14: // VMADN
-				printf("VMADN %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMADN %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
@@ -310,7 +310,7 @@ switch(rs) {
 				break;
 
 			case 15: // VMADH
-				printf("VMADH %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VMADH %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
@@ -334,7 +334,7 @@ switch(rs) {
 				break;
 
 			case 16: // VADD
-				printf("VADD %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VADD %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] + (int32_t)(int16_t)C->c2.h[vt][j] + ((C->cc2.n.vco>>i)&1);
@@ -351,7 +351,7 @@ switch(rs) {
 				break;
 
 			case 17: // VSUB
-				printf("VSUB %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VSUB %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = (int32_t)(int16_t)C->c2.h[vs][i] - (int32_t)(int16_t)C->c2.h[vt][j] - ((C->cc2.n.vco>>(i+8))&1);
@@ -368,7 +368,7 @@ switch(rs) {
 				break;
 
 			case 19: // VABS
-				printf("VABS %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VABS %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = (int16_t)C->c2.h[vt][j];
@@ -384,7 +384,7 @@ switch(rs) {
 				break;
 
 			case 20: // VADDC
-				printf("VADDC %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VADDC %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vco = 0;
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
@@ -398,7 +398,7 @@ switch(rs) {
 				break;
 
 			case 21: // VSUBC
-				printf("VSUBC %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VSUBC %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vco = 0;
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
@@ -414,7 +414,7 @@ switch(rs) {
 				break;
 
 			case 29: // VSAR
-				printf("VSAR %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VSAR %2u %2u %2u %X\n", vd, vs, vt, el);
 				switch(el)
 				{
 					case 0x8:
@@ -452,7 +452,7 @@ switch(rs) {
 				break;
 
 			case 32: // VLT
-				printf("VLT %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VLT %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vcc = 0;
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
@@ -470,7 +470,7 @@ switch(rs) {
 				break;
 
 			case 33: // VEQ
-				printf("VEQ %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VEQ %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vcc &= ~0xFF;
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
@@ -488,7 +488,7 @@ switch(rs) {
 				break;
 
 			case 34: // VNE
-				printf("VNE %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VNE %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vcc = 0;
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
@@ -506,7 +506,7 @@ switch(rs) {
 				break;
 
 			case 35: // VGE
-				printf("VGE %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VGE %2u %2u %2u %X\n", vd, vs, vt, el);
 				C->cc2.n.vcc = 0;
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
@@ -524,7 +524,7 @@ switch(rs) {
 				break;
 
 			case 40: // VAND
-				printf("VAND %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VAND %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = C->c2.h[vs][i] & C->c2.h[vt][j];
@@ -534,7 +534,7 @@ switch(rs) {
 				break;
 
 			case 41: // VNAND
-				printf("VNAND %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VNAND %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = ~(C->c2.h[vs][i] & C->c2.h[vt][j]);
@@ -544,7 +544,7 @@ switch(rs) {
 				break;
 
 			case 42: // VOR
-				printf("VOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VOR %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = C->c2.h[vs][i] | C->c2.h[vt][j];
@@ -554,7 +554,7 @@ switch(rs) {
 				break;
 
 			case 43: // VNOR
-				printf("VNOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VNOR %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = ~(C->c2.h[vs][i] | C->c2.h[vt][j]);
@@ -564,7 +564,7 @@ switch(rs) {
 				break;
 
 			case 44: // VXOR
-				printf("VXOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VXOR %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = C->c2.h[vs][i] ^ C->c2.h[vt][j];
@@ -574,7 +574,7 @@ switch(rs) {
 				break;
 
 			case 45: // VNXOR
-				printf("VNXOR %2u %2u %2u %X\n", vd, vs, vt, el);
+				rsp_debug_printf("VNXOR %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int32_t r = ~(C->c2.h[vs][i] ^ C->c2.h[vt][j]);
@@ -584,7 +584,7 @@ switch(rs) {
 				break;
 
 			case 51: // VMOV
-				printf("VMOV %2u[%2u] %2u[%2u]\n", vd, vs, vt, el);
+				rsp_debug_printf("VMOV %2u[%2u] %2u[%2u]\n", vd, vs, vt, el);
 				{
 					uint16_t r = (uint16_t)C->c2.h[vt][el&0x7];
 					C->c2.h[vd][vs&0x7] = r;
@@ -596,12 +596,12 @@ switch(rs) {
 
 			case 55:
 				// VNOP
-				printf("VNOP\n");
+				rsp_debug_printf("VNOP\n");
 				break;
 
 			case 63:
 				// VNULL
-				printf("VNULL\n");
+				rsp_debug_printf("VNULL\n");
 				break;
 
 			default:

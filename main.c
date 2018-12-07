@@ -16,6 +16,12 @@
 #define DEBUG_SP 1
 #define DEBUG_VI 1
 
+#if 0
+#define rsp_debug_printf printf
+#else
+#define rsp_debug_printf(...)
+#endif
+
 #define RAM_TO_FILE 0
 
 #if RAM_TO_FILE
@@ -250,8 +256,10 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 	} else if(addr >= 0x04040000U && addr < 0x0404FFFFU) {
 		struct rsp *rsp = &rsp_baseinst;
 #if DEBUG_SP
-		printf("SP read %016llX mask %08X\n",
-			(unsigned long long)addr, mask);
+		if(addr != 0X04040010) {
+			printf("SP read %016llX mask %08X\n",
+				(unsigned long long)addr, mask);
+		}
 #endif
 		switch(addr)
 		{

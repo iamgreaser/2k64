@@ -808,7 +808,7 @@ switch(op>>26U) {
 		{
 			// LQV
 			case 4: {
-				printf("LQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				rsp_debug_printf("LQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
 				assert(v_element == 0);
 				// FIXME this is wrong
 				for(int i = 0; i < 8; i++) {
@@ -819,7 +819,7 @@ switch(op>>26U) {
 
 			// LTV
 			case 11: {
-				printf("LTV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				rsp_debug_printf("LTV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
 				assert((v_element&0x1) == 0);
 				for(int i = 0; i < 8; i++) {
 					MIPSXNAME(_read16)(C,
@@ -851,7 +851,7 @@ switch(op>>26U) {
 			// SQV
 			case 4: {
 				// FIXME this is wrong
-				printf("SQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				rsp_debug_printf("SQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
 				assert(v_element == 0);
 				for(int i = 0; i < 8; i++) {
 					MIPSXNAME(_write16)(C, C->regs[v_base]+(i<<1)+(v_offset<<4), C->c2.h[v_vt][i]);
@@ -860,7 +860,7 @@ switch(op>>26U) {
 
 			// STV
 			case 11: {
-				printf("STV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				rsp_debug_printf("STV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
 				assert((v_element&0x1) == 0);
 				for(int i = 0; i < 8; i++) {
 					MIPSXNAME(_write16)(C,
