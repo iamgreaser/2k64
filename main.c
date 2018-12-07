@@ -142,9 +142,6 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #undef MIPSXNAME
 #undef MIPS_IS_RSP
 
-// RDP
-#include "rdp.h"
-
 uint32_t pifimg[2*256];
 #define RAM_SIZE_WORDS (8*1024*256)
 #define RAM_SIZE_BYTES (4*RAM_SIZE_WORDS)
@@ -158,6 +155,9 @@ uint32_t rsp_mem[8*256];
 uint32_t pifmem[2*256];
 #endif
 uint32_t cartmem[64*1024*256];
+
+// RDP
+#include "rdp.h"
 
 uint32_t pi_dram_addr = 0;
 uint32_t pi_cart_addr = 0;
@@ -309,8 +309,7 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 				data_out = dpc_end;
 				break;
 			case 0x04100008: // DPC_CURRENT_REG
-				// FIXME: get current instead of skipping
-				data_out = dpc_end;
+				data_out = dpc_current;
 				break;
 			default:
 				data_out = 0;
@@ -553,10 +552,12 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		switch(addr)
 		{
 			case 0x04100000: // DPC_START_REG
-				dpc_start = data & 0xFFFFFF;
+				dpc_start = data & 0xFFFFF8;
+				dpc_current = dpc_start; // unconfirmed
+				dpc_end = dpc_start; // unconfirmed
 				break;
 			case 0x04100004: // DPC_END_REG
-				dpc_end = data & 0xFFFFFF;
+				dpc_end = data & 0xFFFFF8;
 				break;
 		}
 		return;
@@ -955,6 +956,8 @@ int main(int argc, char *argv[])
 			rsp->c0.n.dma_cache = dst;
 			rsp->c0.n.dma_dram = src;
 		}
+
+		rdp_run_commands();
 
 		global_clock += 1;
 		// kludge for if you want a better idea of speed in practice
