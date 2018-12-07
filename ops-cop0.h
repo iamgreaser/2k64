@@ -8,6 +8,11 @@ switch(rs) {
 				C->regs[rt] = C->c0.n.dma_dram;
 				SIGNEX32R(C, rt);
 			} break;
+		case 4: // SP_STATUS
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.sp_status;
+				SIGNEX32R(C, rt);
+			} break;
 		case 5: // DMA_FULL
 			if(rt != 0) {
 				C->regs[rt] = (C->c0.n.sp_status>>3)&0x1;

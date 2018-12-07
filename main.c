@@ -312,7 +312,12 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		switch(addr)
 		{
 			case 0x04400010:
+				// FIXME learn how this actually works
 				data_out = (global_clock / 6250) % 262;
+				if(data_out >= 240) {
+					data_out -= 240;
+					data_out += 0x200;
+				}
 				break;
 			default:
 				data_out = 0;
