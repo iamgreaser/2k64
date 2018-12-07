@@ -18,9 +18,9 @@
 		offs &= (RAM_SIZE_BYTES-2);
 		uint32_t idata = *(uint16_t *)(((uint8_t *)ram) + offs);
 		uint32_t data = (0
-			|(((((idata>>0 )&0x1F)*0x21)>>2)<<8)
-			|(((((idata>>5 )&0x1F)*0x21)>>2)<<16)
-			|(((((idata>>10)&0x1F)*0x21)>>2)<<24)
+			|(((((idata>>1 )&0x1F)*0x21)>>2)<<8)
+			|(((((idata>>6 )&0x1F)*0x21)>>2)<<16)
+			|(((((idata>>11)&0x1F)*0x21)>>2)<<24)
 		);
 		((uint32_t *)(surface->pixels + surface->pitch*iy))[ix] = data;
 #else
