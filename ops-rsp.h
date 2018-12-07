@@ -56,6 +56,102 @@ switch(rs) {
 	{
 		switch(op&0x3F) {
 
+			case 0: // VMULF
+				printf("VMULF %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r <<= 1;
+					r += 0x8000;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rh = (int32_t)(int16_t)(r>>16);
+					C->c2acc[0][i] = (rl)&0xFFFF;
+					C->c2acc[1][i] = (rh)&0xFFFF;
+					C->c2acc[2][i] = (r>>32);
+					if(rh > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rh < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rh;
+					}
+				}
+				break;
+
+			case 1: // VMULU
+				printf("VMULU %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r <<= 1;
+					r += 0x8000;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rh = (int32_t)(int16_t)(r>>16);
+					C->c2acc[0][i] = (rl)&0xFFFF;
+					C->c2acc[1][i] = (rh)&0xFFFF;
+					C->c2acc[2][i] = 0;
+					if(rh > 0xFFFF) {
+						C->c2acc[2][i] = 0xFFFF;
+						C->c2.h[vd][i] = 0x0000;
+					} else if(rh < 0x0000) {
+						C->c2acc[2][i] = 0xFFFF;
+						C->c2.h[vd][i] = 0x0000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rh;
+					}
+				}
+				break;
+
+			case 8: // VMACF
+				printf("VMACF %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t acc1 = C->c2acc[0][i];
+					int32_t acc2 = C->c2acc[1][i];
+					int64_t acc = (acc2<<16)|(acc1&0xFFFF);
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r <<= 1;
+					r += acc;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rh = (int32_t)(int16_t)(r>>16);
+					C->c2acc[0][i] = (rl)&0xFFFF;
+					C->c2acc[1][i] = (rh)&0xFFFF;
+					C->c2acc[2][i] = (r>>32);
+					if(rh > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rh < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rh;
+					}
+				}
+				break;
+
+			case 9: // VMACU
+				printf("VMACU %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t acc1 = C->c2acc[0][i];
+					int32_t acc2 = C->c2acc[1][i];
+					int64_t acc = (acc2<<16)|(acc1&0xFFFF);
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r <<= 1;
+					r += acc;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rh = (int32_t)(int16_t)(r>>16);
+					C->c2acc[0][i] = (rl)&0xFFFF;
+					C->c2acc[1][i] = (rh)&0xFFFF;
+					C->c2acc[2][i] = 0;
+					if(rh > 0xFFFF) {
+						C->c2.h[vd][i] = 0xFFFF;
+					} else if(rh < 0x0000) {
+						C->c2.h[vd][i] = 0xFFFF;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rh;
+					}
+				}
+				break;
+
 			case 16: // VADD
 				printf("VADD %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
