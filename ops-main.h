@@ -567,7 +567,7 @@ switch(op>>26U) {
 
 	case 18: if((C->c0.n.sr & C0SR_CU(2)) == 0) {
 		C->c0.n.cause &= ~0x30000000;
-		C->c0.n.cause |= 1<<28;
+		C->c0.n.cause |= 2<<28;
 		MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
 		return MER_CpU;
 	} else {
@@ -855,7 +855,12 @@ switch(op>>26U) {
 
 #ifdef MIPS_HAS_FPU
 	// LWC1
-	case 49: {
+	case 49: if((C->c0.n.sr & C0SR_CU(1)) == 0) {
+		C->c0.n.cause &= ~0x30000000;
+		C->c0.n.cause |= 1<<28;
+		MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
+		return MER_CpU;
+	} else {
 		e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata);
 		if(e != MER_NONE) {
 			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
@@ -865,7 +870,12 @@ switch(op>>26U) {
 	} break;
 
 	// LDC1
-	case 53: {
+	case 53: if((C->c0.n.sr & C0SR_CU(1)) == 0) {
+		C->c0.n.cause &= ~0x30000000;
+		C->c0.n.cause |= 1<<28;
+		MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
+		return MER_CpU;
+	} else {
 		uint32_t mdata0, mdata1;
 		e = MIPSXNAME(_read32)(C, C->regs[rs]+(SREG)(int16_t)op, &mdata0);
 		if(e != MER_NONE) {
@@ -883,7 +893,12 @@ switch(op>>26U) {
 	} break;
 
 	// SWC1
-	case 57: {
+	case 57: if((C->c0.n.sr & C0SR_CU(1)) == 0) {
+		C->c0.n.cause &= ~0x30000000;
+		C->c0.n.cause |= 1<<28;
+		MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
+		return MER_CpU;
+	} else {
 		e = MIPSXNAME(_write32)(C, C->regs[rs]+(SREG)(int16_t)op, C->c1.di[rt]);
 		if(e != MER_NONE) {
 			MIPSXNAME(_throw_exception)(C, op_pc, e, op_was_branch);
@@ -892,7 +907,12 @@ switch(op>>26U) {
 	} break;
 
 	// SDC1
-	case 61: {
+	case 61: if((C->c0.n.sr & C0SR_CU(1)) == 0) {
+		C->c0.n.cause &= ~0x30000000;
+		C->c0.n.cause |= 1<<28;
+		MIPSXNAME(_throw_exception)(C, op_pc, MER_CpU, op_was_branch);
+		return MER_CpU;
+	} else {
 		// FIXME this is probably wrong
 		e = MIPSXNAME(_write32)(C, C->regs[rs]+(SREG)(int16_t)op, C->c1.di[rt]>>32);
 		if(e != MER_NONE) {

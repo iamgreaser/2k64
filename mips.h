@@ -237,7 +237,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 #ifdef MIPS_IS_RSP
 		printf("$%s = %08X | $c0_%-2d = %08X | $v%-2d = %016llX%016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c2.d[i][0], C->c2.d[i][1]);
 #else
-		printf("$%s = %016llX | $c0_%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i]);
+		printf("$%s = %016llX | $c0_%-2d = %016llX | $f%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c1.di[i]);
 #endif
 	}
 
@@ -755,6 +755,10 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 	e = MER_NONE;
 
 	assert(C->regs[0] == 0);
+
+#ifndef MIPS_IS_RSP
+	C->c0.n.count += 1;
+#endif
 
 #ifdef MIPS_IS_RSP
 	C->pc &= 0xFFF;

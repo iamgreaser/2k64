@@ -25,6 +25,12 @@
 		case 2:
 			break;
 
+		// MTC1
+		case 4:
+			//printf("MTC1 %d %016llX\n", rd, C->regs[rt]);
+			C->c1.di[rd] = (SREG)(int32_t)C->regs[rt];
+			break;
+
 		// CTC1
 		case 6:
 			break;

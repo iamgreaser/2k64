@@ -37,6 +37,11 @@ switch(rs) {
 				C->regs[rt] = C->c0.n.badvaddr;
 				SIGNEX32R(C, rt);
 			} break;
+		case 9: // c0_count
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.count>>1;
+				SIGNEX32R(C, rt);
+			} break;
 		case 10: // c0_entryhi
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.entryhi;
@@ -127,7 +132,9 @@ switch(rs) {
 			break;
 
 		case 9: // c0_count
+			printf("COUNT %08X -> %08X\n", C->c0.n.count, C->regs[rt]<<1);
 			C->c0.n.count = (SREG)(int32_t)C->regs[rt];
+			C->c0.n.count <<= 1;
 			break;
 
 		case 10: // c0_entryhi
