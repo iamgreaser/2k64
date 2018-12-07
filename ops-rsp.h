@@ -417,30 +417,36 @@ switch(rs) {
 				printf("VSAR %2u %2u %2u %X\n", vd, vs, vt, el);
 				switch(el)
 				{
-
 					case 0x8:
 						for(int i = 0; i < 8; i++) {
 							C->c2.h[vd][i] = C->c2acc[2][i];
-							C->c2acc[2][i] = C->c2.h[vs][i];
+							if(vt == 0) {
+								C->c2acc[2][i] = C->c2.h[vs][i];
+							}
 						}
 						break;
 					case 0x9:
 						for(int i = 0; i < 8; i++) {
 							C->c2.h[vd][i] = C->c2acc[1][i];
-							C->c2acc[1][i] = C->c2.h[vs][i];
+							if(vt == 0) {
+								C->c2acc[1][i] = C->c2.h[vs][i];
+							}
 						}
 						break;
 					case 0xA:
 						for(int i = 0; i < 8; i++) {
 							C->c2.h[vd][i] = C->c2acc[0][i];
-							C->c2acc[0][i] = C->c2.h[vs][i];
+							if(vt == 0) {
+								C->c2acc[0][i] = C->c2.h[vs][i];
+							}
 						}
 						break;
 
 					default:
-						printf("UNHANDLED VSAR EL CASE %2u %2u %2u %X\n", vd, vs, vt, el);
-						fflush(stdout);
-						abort();
+						//printf("UNHANDLED VSAR EL CASE %2u %2u %2u %X\n", vd, vs, vt, el);
+						for(int i = 0; i < 8; i++) {
+							C->c2.h[vd][i] = 0;
+						}
 						break;
 				}
 				break;
