@@ -1,7 +1,21 @@
+#define RDSR_USE_XBUS (1<<0)
+#define RDSR_RDP_FROZEN (1<<1)
+#define RDSR_RDP_FLUSHED (1<<2)
+#define RDSR_GCLK_ALIVE (1<<3)
+#define RDSR_TMEM_BUSY (1<<4)
+#define RDSR_PIPELINE_BUSY (1<<5)
+#define RDSR_CMD_BUSY (1<<6)
+#define RDSR_CMD_READY (1<<7)
+#define RDSR_DMA_BUSY (1<<8)
+#define RDSR_CMD_START_VALID (1<<9)
+#define RDSR_CMD_END_VALID (1<<10)
+
+uint32_t rdp_tmem[0x400];
 
 uint64_t rdp_cmd_buffer[22];
 uint64_t rdp_cmd_len = 0;
 
+// 0x2D Set Scissor
 uint32_t rdp_scissor_xh = 0;
 uint32_t rdp_scissor_yh = 0;
 uint32_t rdp_scissor_xl = 0;
@@ -9,17 +23,114 @@ uint32_t rdp_scissor_yl = 0;
 bool rdp_scissor_f = false;
 bool rdp_scissor_o = false;
 
+// 0x2F Set Other Modes
+// I refuse to split this into multiple fields.
+#define RDOM_ATOMIC_PRIM (1<<55)
+#define RDOM_CYCLE_TYPE_MASK (0x3<<52)
+#define RDOM_CYCLE_TYPE_1CYCLE (0x0<<52)
+#define RDOM_CYCLE_TYPE_2CYCLE (0x1<<52)
+#define RDOM_CYCLE_TYPE_COPY (0x2<<52)
+#define RDOM_CYCLE_TYPE_FILL (0x3<<52)
+#define RDOM_PERSP_TEX_EN (1<<51)
+#define RDOM_DETAIL_TEX_EN (1<<50)
+#define RDOM_SHARPEN_TEX_EN (1<<49)
+#define RDOM_TEX_LOD_EN (1<<48)
+#define RDOM_EN_TLUT (1<<47)
+#define RDOM_TLUT_TYPE_MASK (0x1<<46)
+#define RDOM_TLUT_TYPE_RGBA (0x0<<46)
+#define RDOM_TLUT_TYPE_IA (0x1<<46)
+#define RDOM_SAMPLE_TYPE_MASK (0x1<<45)
+#define RDOM_SAMPLE_TYPE_1 (0x0<<45)
+#define RDOM_SAMPLE_TYPE_2 (0x1<<45)
+#define RDOM_MID_TEXEL (1<<44)
+#define RDOM_BI_LERP_0 (1<<43)
+#define RDOM_BI_LERP_1 (1<<42)
+#define RDOM_CONVERT_ONE (1<<41)
+#define RDOM_KEY_EN (1<<40)
+#define RDOM_RGB_DITHER_SEL_MASK (0x3<<38)
+#define RDOM_RGB_DITHER_SEL_MAGIC (0x0<<38)
+#define RDOM_RGB_DITHER_SEL_STANDARD (0x1<<38)
+#define RDOM_RGB_DITHER_SEL_NOISE (0x2<<38)
+#define RDOM_RGB_DITHER_SEL_NONE (0x3<<38)
+#define RDOM_ALPHA_DITHER_SEL_MASK (0x3<<36)
+#define RDOM_ALPHA_DITHER_SEL_PATTERN (0x0<<36)
+#define RDOM_ALPHA_DITHER_SEL_NOTPATTERN (0x1<<36)
+#define RDOM_ALPHA_DITHER_SEL_NOISE (0x2<<36)
+#define RDOM_ALPHA_DITHER_SEL_NONE (0x3<<36)
+#define RDOM_BLEND_M1A_CYCLE0_SHIFT 30
+#define RDOM_BLEND_M1A_CYCLE0_MASK (0x3<<RDOM_BLEND_M1A_CYCLE0_SHIFT)
+#define RDOM_BLEND_M1A_CYCLE1_SHIFT 28
+#define RDOM_BLEND_M1A_CYCLE1_MASK (0x3<<RDOM_BLEND_M1A_CYCLE1_SHIFT)
+#define RDOM_BLEND_M1B_CYCLE0_SHIFT 26
+#define RDOM_BLEND_M1B_CYCLE0_MASK (0x3<<RDOM_BLEND_M1B_CYCLE0_SHIFT)
+#define RDOM_BLEND_M1B_CYCLE1_SHIFT 24
+#define RDOM_BLEND_M1B_CYCLE1_MASK (0x3<<RDOM_BLEND_M1B_CYCLE1_SHIFT)
+#define RDOM_BLEND_M2A_CYCLE0_SHIFT 22
+#define RDOM_BLEND_M2A_CYCLE0_MASK (0x3<<RDOM_BLEND_M2A_CYCLE0_SHIFT)
+#define RDOM_BLEND_M2A_CYCLE1_SHIFT 20
+#define RDOM_BLEND_M2A_CYCLE1_MASK (0x3<<RDOM_BLEND_M2A_CYCLE1_SHIFT)
+#define RDOM_BLEND_M2B_CYCLE0_SHIFT 18
+#define RDOM_BLEND_M2B_CYCLE0_MASK (0x3<<RDOM_BLEND_M2B_CYCLE0_SHIFT)
+#define RDOM_BLEND_M2B_CYCLE1_SHIFT 16
+#define RDOM_BLEND_M2B_CYCLE1_MASK (0x3<<RDOM_BLEND_M2B_CYCLE1_SHIFT)
+#define RDOM_FORCE_BLEND (1<<14)
+#define RDOM_ALPHA_CVG_SELECT (1<<13)
+#define RDOM_CVG_TIMES_ALPHA (1<<12)
+#define RDOM_Z_MODE_MASK (0x3<<10)
+#define RDOM_Z_MODE_OPAQUE (0x0<<10)
+#define RDOM_Z_MODE_INTERPENETRATING (0x1<<10)
+#define RDOM_Z_MODE_TRANSPARENT (0x2<<10)
+#define RDOM_Z_MODE_DECAL (0x3<<10)
+#define RDOM_CVG_DEST_MASK (0x3<<8)
+#define RDOM_CVG_DEST_CLAMP (0x0<<8)
+#define RDOM_CVG_DEST_WRAP (0x1<<8)
+#define RDOM_CVG_DEST_ZAP (0x2<<8)
+#define RDOM_CVG_DEST_SAVE (0x3<<8)
+#define RDOM_COLOR_ON_CVG (1<<7)
+#define RDOM_IMAGE_READ_EN (1<<6)
+#define RDOM_Z_UPDATE_EN (1<<5)
+#define RDOM_Z_COMPARE_EN (1<<4)
+#define RDOM_ANTIALIAS_EN (1<<3)
+#define RDOM_Z_SOURCE_SEL (1<<2)
+#define RDOM_DITHER_ALPHA_EN (1<<1)
+#define RDOM_ALPHA_COMPARE_EN (1<<0)
+uint64_t rdp_other_modes = 0;
+
+// 0x35 Set Tile
+uint32_t rdp_tile_format = 0;
+uint32_t rdp_tile_size = 0;
+uint32_t rdp_tile_line = 0;
+uint32_t rdp_tile_tmem_addr = 0;
+uint32_t rdp_tile_idx = 0;
+uint32_t rdp_tile_palette = 0;
+bool rdp_tile_ct = false;
+bool rdp_tile_mt = false;
+uint32_t rdp_mask_t = 0;
+uint32_t rdp_shift_t = 0;
+bool rdp_tile_cs = false;
+bool rdp_tile_ms = false;
+uint32_t rdp_mask_s = 0;
+uint32_t rdp_shift_s = 0;
+
+// 0x37 Set Fill Color
 uint32_t rdp_fill_color = 0;
+
+// 0x38 Set Fog Color
 uint32_t rdp_fog_color = 0;
+
+// 0x39 Set Blend Color
 uint32_t rdp_blend_color = 0;
 
+// 0x3D Set Texture Image
 uint32_t rdp_texture_image_format = 0;
 uint32_t rdp_texture_image_size = 0;
 uint32_t rdp_texture_image_width = 0;
 uint32_t rdp_texture_image_addr = 0;
 
+// 0x3E Set Z Image
 uint32_t rdp_z_image_addr = 0;
 
+// 0x3F Set Color Image
 uint32_t rdp_color_image_format = 0;
 uint32_t rdp_color_image_size = 0;
 uint32_t rdp_color_image_width = 0;
@@ -28,7 +139,7 @@ uint32_t rdp_color_image_addr = 0;
 void rdp_run_one_command(void) {
 	uint64_t cmd;
 
-	if((dpc_status & 0x0001) != 0) {
+	if((dpc_status & RDSR_USE_XBUS) != 0) {
 		// XBUS DMEM DMA
 		uint64_t cmdh = rsp_mem[((dpc_current>>2)+0) & 0x3FF];
 		uint64_t cmdl = rsp_mem[((dpc_current>>2)+1) & 0x3FF];
@@ -44,28 +155,108 @@ void rdp_run_one_command(void) {
 	cmd = rdp_cmd_buffer[0];
 	switch(cmd>>56) {
 		case 0x24:
+		case 0x25: {
 			if(rdp_cmd_len < 2) break;
-			printf("RDP %016llX Texture Rectangle\n", cmd);
+			bool is_flipped = (((cmd>>56)&0x1) != 0);
+
+			if(is_flipped) {
+				rdp_debug_printf("RDP %016llX Texture Rectangle Flip\n", cmd);
+			} else {
+				rdp_debug_printf("RDP %016llX Texture Rectangle\n", cmd);
+			}
+
+			uint32_t sl = (cmd>>44)&0xFFF;
+			uint32_t tl = (cmd>>32)&0xFFF;
+			uint32_t tile = (cmd>>24)&0x7;
+			uint32_t sh = (cmd>>12)&0xFFF;
+			uint32_t th = (cmd>>0)&0xFFF;
+			sl >>= 2;
+			tl >>= 2;
+			sh >>= 2;
+			th >>= 2;
+			switch(rdp_tile_size)
+			{
+				case 0: sl >>= 1; sh >>= 1; break;
+				case 1: break;
+				case 2: sl <<= 1; sh <<= 1; break;
+				case 3: sl <<= 2; sh <<= 2; break;
+			}
+			rdp_debug_printf("Render %d,%d -> %d,%d\n", sl, tl, sh, th);
+
+			int16_t s = (rdp_cmd_buffer[1]>>48);
+			int16_t t = (rdp_cmd_buffer[1]>>32);
+			int16_t dsdx = (rdp_cmd_buffer[1]>>16);
+			int16_t dtdy = (rdp_cmd_buffer[1]);
+			int32_t yl = (cmd>>0)&0xFFF;
+			int32_t xl = (cmd>>12)&0xFFF;
+			int32_t yh = (cmd>>32)&0xFFF;
+			int32_t xh = (cmd>>44)&0xFFF;
+
+			if(xh < rdp_scissor_xh) { xh = rdp_scissor_xh; }
+			if(yh < rdp_scissor_yh) { yh = rdp_scissor_yh; }
+			if(xl > rdp_scissor_xl) { xl = rdp_scissor_xl; }
+			if(yl > rdp_scissor_yl) { yl = rdp_scissor_yl; }
+
+			xh >>= 2;
+			yh >>= 2;
+			xl >>= 2;
+			yl >>= 2;
+			rdp_debug_printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
+			uint32_t acc_t = t;
+			switch(rdp_color_image_size)
+			{
+				case 2: // 15bpp
+					for(int y = yl; y < yh; y++) {
+						uint32_t acc_s = s;
+						uint32_t tmem_offs = (rdp_tile_tmem_addr<<1);
+						uint32_t dram_offs = (rdp_color_image_addr>>2);
+						tmem_offs += ((rdp_tile_line+1)<<1)*((acc_t>>5)&0x3F);
+						dram_offs += ((rdp_color_image_width+1)>>1)*y;
+						for(int x = xl; x < xh; x++) {
+							ram[(dram_offs+x)&RAM_SIZE_WORDS-1]
+							= rdp_tmem[(tmem_offs
+								+((acc_s>>5)&0x3F)
+							)&0x3FF];
+						}
+					}
+					break;
+				case 3: // 32bpp
+					for(int y = yl; y < yh; y++) {
+						uint32_t acc_s = s;
+						uint32_t tmem_offs = (rdp_tile_tmem_addr<<1);
+						uint32_t dram_offs = (rdp_color_image_addr>>2);
+						tmem_offs += ((rdp_tile_line+1)<<1)*((acc_t>>5)&0x3F);
+						dram_offs += ((rdp_color_image_width+1))*y;
+						for(int x = xl; x < xh; x++) {
+							ram[(dram_offs+x)&RAM_SIZE_WORDS-1]
+							= rdp_tmem[(tmem_offs
+								+((acc_s>>5)&0x3F)
+							)&0x3FF];
+						}
+					}
+					break;
+			}
+
 			rdp_cmd_len = 0;
-			break;
+		} break;
 
 		case 0x27:
-			printf("RDP %016llX Sync Pipe\n", cmd);
+			rdp_debug_printf("RDP %016llX Sync Pipe\n", cmd);
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x28:
-			printf("RDP %016llX Sync Tile\n", cmd);
+			rdp_debug_printf("RDP %016llX Sync Tile\n", cmd);
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x29:
-			printf("RDP %016llX Sync Full\n", cmd);
+			rdp_debug_printf("RDP %016llX Sync Full\n", cmd);
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x2D:
-			printf("RDP %016llX Set Scissor\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Scissor\n", cmd);
 			rdp_scissor_yl = (cmd>>0)&0xFFF;
 			rdp_scissor_xl = (cmd>>12)&0xFFF;
 			rdp_scissor_yh = (cmd>>32)&0xFFF;
@@ -76,27 +267,78 @@ void rdp_run_one_command(void) {
 			break;
 
 		case 0x2E:
-			printf("RDP %016llX Set Prim Depth\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Prim Depth\n", cmd);
+			rdp_debug_printf(" --- TODO! --- \n");
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x2F:
-			printf("RDP %016llX Set Other Modes\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Other Modes\n", cmd);
+			rdp_other_modes = (cmd<<8)>>8;
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x30:
+			rdp_debug_printf("RDP %016llX Load Tlut\n", cmd);
+			rdp_debug_printf(" --- TODO! --- \n");
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x34:
-			printf("RDP %016llX Load Tile\n", cmd);
+			rdp_debug_printf("RDP %016llX Load Tile\n", cmd);
+			{
+				uint32_t sl = (cmd>>44)&0xFFF;
+				uint32_t tl = (cmd>>32)&0xFFF;
+				uint32_t tile = (cmd>>24)&0x7;
+				uint32_t sh = (cmd>>12)&0xFFF;
+				uint32_t th = (cmd>>0)&0xFFF;
+				sl >>= 2;
+				tl >>= 2;
+				sh >>= 2;
+				th >>= 2;
+				switch(rdp_tile_size)
+				{
+					case 0: sl >>= 1; sh >>= 1; break;
+					case 1: break;
+					case 2: sl <<= 1; sh <<= 1; break;
+					case 3: sl <<= 2; sh <<= 2; break;
+				}
+				rdp_debug_printf("Load %d,%d -> %d,%d\n", sl, tl, sh, th);
+				for(int y = tl; y <= th; y++) {
+					uint32_t tmem_offs = (rdp_tile_tmem_addr<<1);
+					uint32_t dram_offs = (rdp_texture_image_addr>>2);
+					tmem_offs += ((rdp_tile_line+1)<<1)*y;
+					dram_offs += ((rdp_texture_image_width+1)<<4)*y;
+					for(int x = sl; x <= sh; x++) {
+						rdp_tmem[(tmem_offs+x)&0x3FF] = ram[(dram_offs+x)&RAM_SIZE_WORDS-1];
+					}
+				}
+			}
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x35:
-			printf("RDP %016llX Set Tile\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Tile\n", cmd);
+			rdp_tile_format = (cmd>>53)&0x7;
+			rdp_tile_size = (cmd>>51)&0x3;
+			rdp_tile_line = (cmd>>41)&0x1FF;
+			rdp_tile_tmem_addr = (cmd>>32)&0x1FF;
+			rdp_tile_idx = (cmd>>24)&0x7;
+			rdp_tile_palette = (cmd>>20)&0xF;
+			rdp_tile_ct = ((cmd>>19)&0x1)!=0;
+			rdp_tile_mt = ((cmd>>18)&0x1)!=0;
+			rdp_mask_t = (cmd>>14)&0xF;
+			rdp_shift_t = (cmd>>10)&0xF;
+			rdp_tile_cs = ((cmd>>9)&0x1)!=0;
+			rdp_tile_ms = ((cmd>>8)&0x1)!=0;
+			rdp_mask_s = (cmd>>4)&0xF;
+			rdp_shift_s = (cmd>>0)&0xF;
+
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x36:
-			printf("RDP %016llX Fill Rectangle\n", cmd);
+			rdp_debug_printf("RDP %016llX Fill Rectangle\n", cmd);
 			{
 				int32_t yl = (cmd>>0)&0xFFF;
 				int32_t xl = (cmd>>12)&0xFFF;
@@ -112,7 +354,7 @@ void rdp_run_one_command(void) {
 				yh >>= 2;
 				xl >>= 2;
 				yl >>= 2;
-				printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
+				rdp_debug_printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
 				switch(rdp_color_image_size)
 				{
 					case 2: // 15bpp
@@ -123,7 +365,7 @@ void rdp_run_one_command(void) {
 							uint32_t offs = (rdp_color_image_addr>>2);
 							offs += ((rdp_color_image_width+1)>>1)*y;
 							for(int x = xl; x < xh; x++) {
-								ram[offs+x] = rdp_fill_color;
+								ram[(offs+x)&RAM_SIZE_WORDS-1] = rdp_fill_color;
 							}
 						}
 						break;
@@ -132,7 +374,7 @@ void rdp_run_one_command(void) {
 							uint32_t offs = (rdp_color_image_addr>>2);
 							offs += (rdp_color_image_width+1)*y;
 							for(int x = xl; x < xh; x++) {
-								ram[offs+x] = rdp_fill_color;
+								ram[(offs+x)&RAM_SIZE_WORDS-1] = rdp_fill_color;
 							}
 						}
 						break;
@@ -142,30 +384,31 @@ void rdp_run_one_command(void) {
 			break;
 
 		case 0x37:
-			printf("RDP %016llX Set Fill Color\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Fill Color\n", cmd);
 			rdp_fill_color = cmd&0xFFFFFFFF;
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x38:
-			printf("RDP %016llX Set Fog Color\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Fog Color\n", cmd);
 			rdp_fog_color = cmd&0xFFFFFFFF;
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x39:
-			printf("RDP %016llX Set Blend Color\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Blend Color\n", cmd);
 			rdp_blend_color = cmd&0xFFFFFFFF;
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x3C:
-			printf("RDP %016llX Set Combine Mode\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Combine Mode\n", cmd);
+			rdp_debug_printf(" --- TODO! --- \n");
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x3D:
-			printf("RDP %016llX Set Texture Image\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Texture Image\n", cmd);
 			rdp_texture_image_format = (cmd>>53)&0x7;
 			rdp_texture_image_size = (cmd>>51)&0x3;
 			rdp_texture_image_width = (cmd>>32)&0x3FF;
@@ -174,13 +417,13 @@ void rdp_run_one_command(void) {
 			break;
 
 		case 0x3E:
-			printf("RDP %016llX Set Z Image\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Z Image\n", cmd);
 			rdp_texture_image_addr = (cmd>>0)&0x3FFFFFF;
 			rdp_cmd_len = 0;
 			break;
 
 		case 0x3F:
-			printf("RDP %016llX Set Color Image\n", cmd);
+			rdp_debug_printf("RDP %016llX Set Color Image\n", cmd);
 			rdp_color_image_format = (cmd>>53)&0x7;
 			rdp_color_image_size = (cmd>>51)&0x3;
 			rdp_color_image_width = (cmd>>32)&0x3FF;
@@ -189,7 +432,7 @@ void rdp_run_one_command(void) {
 			break;
 
 		default:
-			printf("RDP unhandled command %016llX\n", cmd);
+			rdp_debug_printf("RDP unhandled command %016llX\n", cmd);
 			rdp_cmd_len = 0;
 			break;
 	}
@@ -199,7 +442,29 @@ void rdp_run_one_command(void) {
 
 void rdp_run_commands(void)
 {
-	if(dpc_current != dpc_end) {
+	// Do we have commands to run?
+	if(dpc_current == dpc_end_saved) {
+		// Clear busy
+		dpc_status &= ~RDSR_CMD_BUSY;
+		dpc_status &= ~RDSR_DMA_BUSY;
+		dpc_status |= RDSR_CMD_READY;
+
+		// Are start and end valid?
+		if((dpc_status & (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) == (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) {
+			dpc_current = dpc_start;
+			dpc_end_saved = dpc_end;
+			dpc_status &= (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID);
+
+			// Set busy
+			dpc_status |= (1<<8);
+		}
+	} else {
+		// Set busy
+		dpc_status |= RDSR_CMD_BUSY;
+		dpc_status |= RDSR_DMA_BUSY;
+		dpc_status &= ~RDSR_CMD_READY;
+
+		// Run commands
 		rdp_run_one_command();
 	}
 }

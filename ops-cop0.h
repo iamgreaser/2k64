@@ -135,12 +135,12 @@ switch(rs) {
 		case 8: // CMD_START
 			printf("CMD_START %08X\n", C->regs[rt]);
 			dpc_start = C->regs[rt];
-			dpc_end = C->regs[rt];
-			dpc_current = C->regs[rt];
+			dpc_status |= (1<<9);
 			break;
 		case 9: // CMD_END
 			printf("CMD_END %08X\n", C->regs[rt]);
 			dpc_end = C->regs[rt];
+			dpc_status |= (1<<10);
 			break;
 		case 11: // CMD_STATUS
 			printf("CMD_STATUS %08X\n", C->regs[rt]);
