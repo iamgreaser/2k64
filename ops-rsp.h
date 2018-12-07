@@ -105,6 +105,92 @@ switch(rs) {
 				}
 				break;
 
+			case 4: // VMUDL
+				printf("VMUDL %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t r = (uint64_t)(uint16_t)C->c2.h[vs][i] * (uint64_t)(uint16_t)C->c2.h[vt][j];
+					r >>= 16;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rl > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rl < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rl;
+					}
+				}
+				break;
+
+			case 5: // VMUDM
+				printf("VMUDM %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (uint64_t)(uint16_t)C->c2.h[vt][j];
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rm < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rm;
+					}
+				}
+				break;
+
+			case 6: // VMUDN
+				printf("VMUDN %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t r = (uint64_t)(uint16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rl > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rl < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rl;
+					}
+				}
+				break;
+
+			case 7: // VMUDH
+				printf("VMUDH %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r <<= 16;
+					int32_t rl = r;
+					int32_t rm = (r>>16);
+					int32_t rh = (r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rm < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rm;
+					}
+				}
+				break;
+
 			case 8: // VMACF
 				printf("VMACF %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
@@ -201,7 +287,7 @@ switch(rs) {
 				break;
 
 			case 14: // VMADN
-				printf("VMADM %2u %2u %2u %X\n", vd, vs, vt, el);
+				printf("VMADN %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
 					int64_t acc = GET_ACC_FOR_LANE(i);
