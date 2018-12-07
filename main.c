@@ -911,8 +911,8 @@ int main(int argc, char *argv[])
 					src &= 0x1FF8;
 					dst &= RAM_SIZE_BYTES-8;
 				}
-				src += skip;
-				src &= 0x1FF8;
+				dst += skip;
+				dst &= RAM_SIZE_BYTES-8;
 			}
 			rsp->c0.n.dma_write_length = 0;
 			rsp->c0.n.dma_cache = src;
@@ -949,8 +949,8 @@ int main(int argc, char *argv[])
 					dst &= 0x1FF8;
 					src &= RAM_SIZE_BYTES-8;
 				}
-				dst += skip;
-				dst &= 0x1FF8;
+				src += skip;
+				src &= RAM_SIZE_BYTES-8;
 			}
 			rsp->c0.n.dma_read_length = 0;
 			rsp->c0.n.dma_cache = dst;
