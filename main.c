@@ -571,11 +571,11 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		{
 			case 0x04100000: // DPC_START_REG
 				dpc_start = data & 0xFFFFF8;
-				dpc_status |= (1<<9);
+				dpc_status |= RDSR_CMD_START_VALID;
 				break;
 			case 0x04100004: // DPC_END_REG
 				dpc_end = data & 0xFFFFF8;
-				dpc_status |= (1<<10);
+				dpc_status |= RDSR_CMD_END_VALID;
 				break;
 			case 0x0410000C: // DPC_STATUS_REG
 				if((data & 0x0001) != 0) { dpc_status &= ~0x0001; }
