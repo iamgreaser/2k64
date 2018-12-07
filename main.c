@@ -116,6 +116,11 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 enum mipserr n64rsp_mem_read(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t *data);
 void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t data);
 
+uint32_t dpc_start = 0;
+uint32_t dpc_end = 0;
+uint32_t dpc_current = 0;
+uint32_t dpc_status = 0;
+
 // VR4300 core
 #define MIPS_IS_VR4300
 #define MIPSNAME vr4300
@@ -310,6 +315,9 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 				break;
 			case 0x04100008: // DPC_CURRENT_REG
 				data_out = dpc_current;
+				break;
+			case 0x0410000C: // DPC_STATUS_REG
+				data_out = dpc_status;
 				break;
 			default:
 				data_out = 0;
@@ -558,6 +566,15 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				break;
 			case 0x04100004: // DPC_END_REG
 				dpc_end = data & 0xFFFFF8;
+				break;
+			case 0x0410000C: // DPC_STATUS_REG
+				if((data & 0x0001) != 0) { dpc_status &= ~0x0001; }
+				if((data & 0x0002) != 0) { dpc_status |=  0x0001; }
+				if((data & 0x0004) != 0) { dpc_status &= ~0x0002; }
+				if((data & 0x0008) != 0) { dpc_status |=  0x0002; }
+				if((data & 0x0010) != 0) { dpc_status &= ~0x0004; }
+				if((data & 0x0020) != 0) { dpc_status |=  0x0004; }
+				// TODO: counters
 				break;
 		}
 		return;

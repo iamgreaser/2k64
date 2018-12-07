@@ -1,9 +1,4 @@
 
-uint32_t dpc_start = 0;
-uint32_t dpc_end = 0;
-uint32_t dpc_current = 0;
-uint32_t dpc_status = 0;
-
 uint64_t rdp_cmd_buffer[22];
 uint64_t rdp_cmd_len = 0;
 
@@ -15,11 +10,15 @@ bool rdp_scissor_f = false;
 bool rdp_scissor_o = false;
 
 uint32_t rdp_fill_color = 0;
+uint32_t rdp_fog_color = 0;
+uint32_t rdp_blend_color = 0;
 
 uint32_t rdp_texture_image_format = 0;
 uint32_t rdp_texture_image_size = 0;
 uint32_t rdp_texture_image_width = 0;
 uint32_t rdp_texture_image_addr = 0;
+
+uint32_t rdp_z_image_addr = 0;
 
 uint32_t rdp_color_image_format = 0;
 uint32_t rdp_color_image_size = 0;
@@ -27,9 +26,19 @@ uint32_t rdp_color_image_width = 0;
 uint32_t rdp_color_image_addr = 0;
 
 void rdp_run_one_command(void) {
-	uint64_t cmdh = ram[((dpc_current>>2)+0) & (RAM_SIZE_WORDS-1)];
-	uint64_t cmdl = ram[((dpc_current>>2)+1) & (RAM_SIZE_WORDS-1)];
-	uint64_t cmd = (cmdh<<32)|cmdl;
+	uint64_t cmd;
+
+	if((dpc_status & 0x0001) != 0) {
+		// XBUS DMEM DMA
+		uint64_t cmdh = rsp_mem[((dpc_current>>2)+0) & 0x3FF];
+		uint64_t cmdl = rsp_mem[((dpc_current>>2)+1) & 0x3FF];
+		cmd = (cmdh<<32)|cmdl;
+	} else {
+		// Primary DMA
+		uint64_t cmdh = ram[((dpc_current>>2)+0) & (RAM_SIZE_WORDS-1)];
+		uint64_t cmdl = ram[((dpc_current>>2)+1) & (RAM_SIZE_WORDS-1)];
+		cmd = (cmdh<<32)|cmdl;
+	}
 	assert(rdp_cmd_len >= 0 && rdp_cmd_len < sizeof(rdp_cmd_buffer)/sizeof(rdp_cmd_buffer[0]));
 	rdp_cmd_buffer[rdp_cmd_len++] = cmd;
 	cmd = rdp_cmd_buffer[0];
@@ -37,6 +46,11 @@ void rdp_run_one_command(void) {
 		case 0x24:
 			if(rdp_cmd_len < 2) break;
 			printf("RDP %016llX Texture Rectangle\n", cmd);
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x27:
+			printf("RDP %016llX Sync Pipe\n", cmd);
 			rdp_cmd_len = 0;
 			break;
 
@@ -58,6 +72,11 @@ void rdp_run_one_command(void) {
 			rdp_scissor_xh = (cmd>>44)&0xFFF;
 			rdp_scissor_o = (((cmd>>24)&0x1) != 0);
 			rdp_scissor_f = (((cmd>>25)&0x1) != 0);
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x2E:
+			printf("RDP %016llX Set Prim Depth\n", cmd);
 			rdp_cmd_len = 0;
 			break;
 
@@ -128,6 +147,18 @@ void rdp_run_one_command(void) {
 			rdp_cmd_len = 0;
 			break;
 
+		case 0x38:
+			printf("RDP %016llX Set Fog Color\n", cmd);
+			rdp_fog_color = cmd&0xFFFFFFFF;
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x39:
+			printf("RDP %016llX Set Blend Color\n", cmd);
+			rdp_blend_color = cmd&0xFFFFFFFF;
+			rdp_cmd_len = 0;
+			break;
+
 		case 0x3C:
 			printf("RDP %016llX Set Combine Mode\n", cmd);
 			rdp_cmd_len = 0;
@@ -138,6 +169,12 @@ void rdp_run_one_command(void) {
 			rdp_texture_image_format = (cmd>>53)&0x7;
 			rdp_texture_image_size = (cmd>>51)&0x3;
 			rdp_texture_image_width = (cmd>>32)&0x3FF;
+			rdp_texture_image_addr = (cmd>>0)&0x3FFFFFF;
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x3E:
+			printf("RDP %016llX Set Z Image\n", cmd);
 			rdp_texture_image_addr = (cmd>>0)&0x3FFFFFF;
 			rdp_cmd_len = 0;
 			break;

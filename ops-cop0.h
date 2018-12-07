@@ -30,6 +30,30 @@ switch(rs) {
 			}
 			C->c0.n.sp_reserved |= 0x1;
 			break;
+		case 8: // CMD_START
+			if(rt != 0) {
+				C->regs[rt] = dpc_start;
+				SIGNEX32R(C, rt);
+			}
+			break;
+		case 9: // CMD_END
+			if(rt != 0) {
+				C->regs[rt] = dpc_end;
+				SIGNEX32R(C, rt);
+			}
+			break;
+		case 10: // CMD_CURRENT
+			if(rt != 0) {
+				C->regs[rt] = dpc_current;
+				SIGNEX32R(C, rt);
+			}
+			break;
+		case 11: // CMD_STATUS
+			if(rt != 0) {
+				C->regs[rt] = dpc_status;
+				SIGNEX32R(C, rt);
+			}
+			break;
 
 #else
 		case 0: // c0_index
@@ -108,9 +132,25 @@ switch(rs) {
 			C->c0.n.dma_write_length = C->regs[rt];
 			break;
 
+		case 8: // CMD_START
+			printf("CMD_START %08X\n", C->regs[rt]);
+			dpc_start = C->regs[rt];
+			dpc_end = C->regs[rt];
+			dpc_current = C->regs[rt];
+			break;
+		case 9: // CMD_END
+			printf("CMD_END %08X\n", C->regs[rt]);
+			dpc_end = C->regs[rt];
+			break;
 		case 11: // CMD_STATUS
 			printf("CMD_STATUS %08X\n", C->regs[rt]);
-			//C->c0.n.cmd_status = C->regs[rt];
+			if((C->regs[rt] & 0x0001) != 0) { dpc_status &= ~0x0001; }
+			if((C->regs[rt] & 0x0002) != 0) { dpc_status |=  0x0001; }
+			if((C->regs[rt] & 0x0004) != 0) { dpc_status &= ~0x0002; }
+			if((C->regs[rt] & 0x0008) != 0) { dpc_status |=  0x0002; }
+			if((C->regs[rt] & 0x0010) != 0) { dpc_status &= ~0x0004; }
+			if((C->regs[rt] & 0x0020) != 0) { dpc_status |=  0x0004; }
+			// TODO: counters
 			break;
 
 #else
