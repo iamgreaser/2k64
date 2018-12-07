@@ -607,6 +607,8 @@ switch(rs) {
 					C->c2divout = romdata>>rshift;
 					if((int16_t)C->c2.h[vt][el&0x7] < 0) {
 						C->c2divout ^= 0xFFFFFFFF;
+					} else if((int16_t)C->c2.h[vt][el&0x7] == 0) {
+						C->c2divout = 0x7FFFFFFF;
 					}
 
 					for(int i = 0; i < 8; i++) {
@@ -631,6 +633,39 @@ switch(rs) {
 
 			case 52: // VRSQ
 				rsp_debug_printf("VRSQ %2u %2u %2u %X\n", vd, vs, vt, el);
+				{
+					int de = vs;
+
+					C->c2divin = abs((int16_t)C->c2.h[vt][el&0x7]);
+					int lshift = 0;
+					while(lshift < 32) {
+						if((C->c2divin & (0x80000000U>>lshift)) != 0) {
+							break;
+						}
+						lshift++;
+					}
+
+					if(C->c2divin == 0) {
+						lshift = 16;
+					}
+
+					uint32_t addr = ((C->c2divin<<(lshift+1))>>(22+1))&0x3FF;
+					addr = ((addr|0x200)&0x3FE)|(lshift&0x1);
+					uint32_t romdata = (0x10000|rsp_reciprocal_rom[addr])<<14;
+					int rshift = ((~lshift)&0x1F)>>1;
+					C->c2divout = romdata>>rshift;
+					if((int16_t)C->c2.h[vt][el&0x7] < 0) {
+						C->c2divout ^= 0xFFFFFFFF;
+					} else if((int16_t)C->c2.h[vt][el&0x7] == 0) {
+						C->c2divout = 0x7FFFFFFF;
+					}
+
+					for(int i = 0; i < 8; i++) {
+						int j = elparamtab[el][i];
+						C->c2acc[0][i] = C->c2.h[vt][j];
+					}
+					C->c2.h[vd][de] = C->c2divout;
+				}
 
 				break;
 
