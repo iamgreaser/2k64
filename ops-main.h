@@ -81,6 +81,22 @@ switch(op>>26U) {
 			break;
 
 #ifndef MIPS_IS_RSP
+		// DS(LL|RL|RA)V
+		case 20: // DSLLV
+			if(rd != 0) {
+				C->regs[rd] = C->regs[rt] << (C->regs[rs]&0x3F);
+			} break;
+		case 22: // DSRLV
+			if(rd != 0) {
+				C->regs[rd] = ((uint64_t)C->regs[rt]) >> (uint64_t)(C->regs[rs]&0x3F);
+			} break;
+		case 23: // DSRAV
+			if(rd != 0) {
+				C->regs[rd] = ((int64_t)C->regs[rt]) >> (int64_t)(C->regs[rs]&0x3F);
+			} break;
+#endif
+
+#ifndef MIPS_IS_RSP
 		// (MULT|DIV)U?
 		case 24: // MULT
 			{

@@ -12,6 +12,7 @@
 #include <signal.h>
 
 #define DEBUG_DP 1
+#define DEBUG_MI 1
 #define DEBUG_SP 1
 #define DEBUG_VI 1
 
@@ -162,6 +163,9 @@ uint32_t vi_width_reg = 640;
 uint32_t vi_x_scale_reg = 0;
 uint32_t vi_y_scale_reg = 0;
 
+uint32_t mi_intr_reg = 0;
+uint32_t mi_intr_mask = 0;
+
 struct {
 	char *cic_type;
 	uint32_t pif_seed;
@@ -297,6 +301,14 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 #endif
 		switch(addr)
 		{
+			case 0x04300008: // MI_INTR_REG
+				data_out = mi_intr_reg;
+				break;
+
+			case 0x0430000C: // MI_INTR_MASK_REG
+				data_out = mi_intr_mask;
+				break;
+
 			default:
 				data_out = 0;
 				break;
@@ -311,7 +323,7 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 #endif
 		switch(addr)
 		{
-			case 0x04400010:
+			case 0x04400010: // VI_CURRENT_REG
 				// FIXME learn how this actually works
 				data_out = (global_clock / 6250) % 262;
 				if(data_out >= 240) {
@@ -514,6 +526,28 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		printf("MI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
+		switch(addr)
+		{
+			case 0x0430000C: // MI_INTR_MASK_REG
+				if((data&0x0001) != 0) { mi_intr_mask &= ~0x0001; }
+				if((data&0x0002) != 0) { mi_intr_mask |=  0x0001; }
+				if((data&0x0004) != 0) { mi_intr_mask &= ~0x0002; }
+				if((data&0x0008) != 0) { mi_intr_mask |=  0x0002; }
+				if((data&0x0010) != 0) { mi_intr_mask &= ~0x0004; }
+				if((data&0x0020) != 0) { mi_intr_mask |=  0x0004; }
+				if((data&0x0040) != 0) { mi_intr_mask &= ~0x0008; }
+				if((data&0x0080) != 0) { mi_intr_mask |=  0x0008; }
+				if((data&0x0100) != 0) { mi_intr_mask &= ~0x0010; }
+				if((data&0x0200) != 0) { mi_intr_mask |=  0x0010; }
+				if((data&0x0400) != 0) { mi_intr_mask &= ~0x0020; }
+				if((data&0x0800) != 0) { mi_intr_mask |=  0x0020; }
+				if((mi_intr_reg & mi_intr_mask) != 0) {
+					C->c0.n.cause |=  0x0400;
+				} else {
+					C->c0.n.cause &= ~0x0400;
+				}
+				break;
+		}
 		return;
 
 	} else if(addr >= 0x04400000 && addr < 0x044FFFFF) {
@@ -532,6 +566,14 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				break;
 			case 0x04400008: // VI_WIDTH_REG
 				vi_width_reg = data & 0x00000FFF;
+				break;
+			case 0x04400010: // VI_CURRENT_REG
+				mi_intr_reg &= ~0x08; // VI interrupt
+				if((mi_intr_reg & mi_intr_mask) != 0) {
+					C->c0.n.cause |=  0x0400;
+				} else {
+					C->c0.n.cause &= ~0x0400;
+				}
 				break;
 			case 0x04400030: // VI_X_SCALE_REG
 				vi_x_scale_reg = data & 0x0FFF0FFF;
@@ -870,6 +912,8 @@ int main(int argc, char *argv[])
 		}
 
 		global_clock += 1;
+		// kludge for if you want a better idea of speed in practice
+		//global_clock += 5;
 
 #if 0
 		// useful for brute forcing the CIC seed
@@ -892,8 +936,15 @@ int main(int argc, char *argv[])
 		}
 		*/
 
-		if(global_clock % (6250*262) == 0) {
+		// FIXME find out when this really happens
+		if(global_clock % (6250*262) == 6250*240) {
 			printf(" - NEW FRAME - \n");
+			mi_intr_reg |= 0x08; // VI interrupt
+			if((mi_intr_reg & mi_intr_mask) != 0) {
+				C->c0.n.cause |=  0x0400;
+			} else {
+				C->c0.n.cause &= ~0x0400;
+			}
 			SDL_LockSurface(surface);
 #include "vi-render.h"
 			SDL_UnlockSurface(surface);
@@ -903,7 +954,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("EMU END\n");
-	
+
 	return 0;
 }
 

@@ -309,7 +309,7 @@ enum mipserr MIPSXNAME(_probe_interrupts)(struct MIPSNAME *C)
 #ifdef MIPS_IS_RSP
 
 #else
-	if((C->c0.n.sr & C0SR_IE) != 0) {
+	if((C->c0.n.sr & (C0SR_EXL|C0SR_ERL|C0SR_IE)) == C0SR_IE) {
 		if((C->c0.n.sr & C->c0.n.cause & 0x0000FF00) != 0) {
 			// Interrupt ready, you should fire an exception now
 			return MER_Int;
