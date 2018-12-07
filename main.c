@@ -136,6 +136,9 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #undef MIPSXNAME
 #undef MIPS_IS_RSP
 
+// RDP
+#include "rdp.h"
+
 uint32_t pifimg[2*256];
 #define RAM_SIZE_WORDS (8*1024*256)
 #define RAM_SIZE_BYTES (4*RAM_SIZE_WORDS)
@@ -149,7 +152,6 @@ uint32_t rsp_mem[8*256];
 uint32_t pifmem[2*256];
 #endif
 uint32_t cartmem[64*1024*256];
-
 
 uint32_t pi_dram_addr = 0;
 uint32_t pi_cart_addr = 0;
@@ -284,11 +286,24 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 
 	} else if(addr >= 0x04100000U && addr < 0x041FFFFFU) {
 #if DEBUG_DP
-		printf("DP read %016llX mask %08X\n",
-			(unsigned long long)addr, mask);
+		//if(addr != 0x04100008) {
+		{
+			printf("DP read %016llX mask %08X\n",
+				(unsigned long long)addr, mask);
+		}
 #endif
 		switch(addr)
 		{
+			case 0x04100000: // DPC_START_REG
+				data_out = dpc_start;
+				break;
+			case 0x04100004: // DPC_END_REG
+				data_out = dpc_end;
+				break;
+			case 0x04100008: // DPC_CURRENT_REG
+				// FIXME: get current instead of skipping
+				data_out = dpc_end;
+				break;
 			default:
 				data_out = 0;
 				break;
@@ -331,6 +346,18 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 					data_out += 0x200;
 				}
 				break;
+			default:
+				data_out = 0;
+				break;
+		}
+
+	} else if(addr >= 0x04500000U && addr < 0x045FFFFFU) {
+#if DEBUG_AI
+		printf("AI read %016llX mask %08X\n",
+			(unsigned long long)addr, mask);
+#endif
+		switch(addr)
+		{
 			default:
 				data_out = 0;
 				break;
@@ -514,6 +541,16 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	} else if(addr >= 0x04100000 && addr < 0x041FFFFF) {
 		printf("DP write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
+
+		switch(addr)
+		{
+			case 0x04100000: // DPC_START_REG
+				dpc_start = data & 0xFFFFFF;
+				break;
+			case 0x04100004: // DPC_END_REG
+				dpc_end = data & 0xFFFFFF;
+				break;
+		}
 		return;
 
 	} else if(addr >= 0x04200000 && addr < 0x042FFFFF) {
