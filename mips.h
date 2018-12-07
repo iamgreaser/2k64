@@ -153,6 +153,9 @@ struct MIPSNAME
 	// cop2 accumulator
 	uint16_t c2acc[3][8];
 
+	uint32_t c2divin;
+	uint32_t c2divout;
+
 	// cop2 control regs
 	union {
 		uint32_t i[32];

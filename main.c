@@ -11,12 +11,16 @@
 #include <SDL.h>
 #include <signal.h>
 
+#include "reciprocal-table.h"
+
+#define DEBUG_AI 1
 #define DEBUG_DP 1
 #define DEBUG_MI 1
+#define DEBUG_PI 1
 #define DEBUG_SP 1
 #define DEBUG_VI 1
 
-#if 0
+#if 1
 #define rsp_debug_printf printf
 #else
 #define rsp_debug_printf(...)
