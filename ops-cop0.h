@@ -27,6 +27,11 @@ switch(rs) {
 			break;
 
 #else
+		case 0: // c0_index
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.index;
+				SIGNEX32R(C, rt);
+			} break;
 		case 4: // c0_context
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.context;
@@ -217,6 +222,26 @@ switch(rs) {
 			printf("entrylo1 %08X\n", C->c0.n.entrylo1);
 			printf("pagemask %08X\n", C->c0.n.pagemask);
 			printf("idx %d\n", idx);
+		} break;
+
+		case 8: // TLBP
+		{
+			C->c0.n.index = (SREG)(int32_t)0x80000000;
+			for(int idx = 0; idx < MIPS_MMU_ENTRIES; idx++)
+			{
+				if(((C->c0.n.entryhi ^ C->tlb[idx].entryhi) & 0xFFFFE000 & ~C->tlb[idx].pagemask) != 0) {
+					continue;
+				}
+				if((C->tlb[idx].entrylo[0] & C->tlb[idx].entrylo[1] & 0x00000001) != 0) {
+					// global - follow through
+				} else if(((C->c0.n.entryhi ^ C->tlb[idx].entryhi) & 0x000000FF) != 0) {
+					continue;
+				}
+
+				C->c0.n.index = idx;
+				break;
+
+			}
 		} break;
 
 		case 24: // ERET
