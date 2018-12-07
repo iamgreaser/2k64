@@ -178,6 +178,16 @@ switch(rs) {
 			C->c0.n.config |= (C->regs[rt] & 0x0F00800F);
 			break;
 
+		case 18: // c0_watchlo
+			C->c0.n.watchlo &= ~0xFFFFFFFB;
+			C->c0.n.watchlo |= (C->regs[rt] & 0xFFFFFFFB);
+			C->c0.n.watchlo = (SREG)(int32_t)C->c0.n.watchlo;
+			break;
+		case 19: // c0_watchhi
+			C->c0.n.watchhi &= ~0x0000000F;
+			C->c0.n.watchhi |= (C->regs[rt] & 0x0000000F);
+			break;
+
 		case 28: // c0_taglo
 			C->c0.n.taglo &= ~0x0FFFFFC0;
 			C->c0.n.taglo |= (C->regs[rt] & 0x0FFFFFC0);

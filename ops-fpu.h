@@ -21,6 +21,12 @@
 	uint32_t ft = (op>>16)&0x1F;
 	switch(rs)
 	{
+		// MFC1
+		case 0:
+			//printf("MFC1 %d %016llX\n", rd, C->c1.di[rd]);
+			C->regs[rt] = (SREG)(int32_t)C->c1.di[rd];
+			break;
+
 		// CFC1
 		case 2:
 			break;
@@ -43,10 +49,27 @@
 					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
 				} break;
+			// BC1T
 			case 1:
 				if(C->coc1) {
 					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
 					C->pl0_is_branch = true;
+				} break;
+			// BC1FL
+			case 2:
+				if(!C->coc1) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
+					C->pl0_is_branch = true;
+				} else {
+					new_op = 0;
+				} break;
+			// BC1TL
+			case 3:
+				if(C->coc1) {
+					C->pc = new_pc + (((SREG)(int16_t)op)<<2);
+					C->pl0_is_branch = true;
+				} else {
+					new_op = 0;
 				} break;
 
 			default:
