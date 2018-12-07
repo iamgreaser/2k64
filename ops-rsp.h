@@ -617,6 +617,20 @@ switch(rs) {
 					}
 					C->c2.h[vd][de] = C->c2divout;
 				}
+				break;
+
+			case 50: // VRCPH
+				rsp_debug_printf("VRCPH %2u %2u %2u %X\n", vd, vs, vt, el);
+				{
+					int de = vs;
+
+					C->c2divin = C->c2.h[vt][el&0x7]<<16;
+					for(int i = 0; i < 8; i++) {
+						int j = elparamtab[el][i];
+						C->c2acc[0][i] = C->c2.h[vt][j];
+					}
+					C->c2.h[vd][de] = C->c2divout>>16;
+				}
 
 				break;
 
@@ -665,6 +679,21 @@ switch(rs) {
 						C->c2acc[0][i] = C->c2.h[vt][j];
 					}
 					C->c2.h[vd][de] = C->c2divout;
+				}
+
+				break;
+
+			case 54: // VRSQH
+				rsp_debug_printf("VRSQH %2u %2u %2u %X\n", vd, vs, vt, el);
+				{
+					int de = vs;
+
+					C->c2divin = C->c2.h[vt][el&0x7]<<16;
+					for(int i = 0; i < 8; i++) {
+						int j = elparamtab[el][i];
+						C->c2acc[0][i] = C->c2.h[vt][j];
+					}
+					C->c2.h[vd][de] = C->c2divout>>16;
 				}
 
 				break;
