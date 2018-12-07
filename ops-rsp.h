@@ -1,3 +1,4 @@
+#define GET_ACC_FOR_LANE(i) (((uint16_t)C->c2acc[0][i])|(((uint32_t)(uint16_t)C->c2acc[1][i])<<16)|(((int64_t)(int16_t)C->c2acc[2][i])<<32))
 switch(rs) {
 	case 0: // MFCz
 	switch(rd) {
@@ -64,16 +65,17 @@ switch(rs) {
 					r <<= 1;
 					r += 0x8000;
 					int32_t rl = (int32_t)(int16_t)r;
-					int32_t rh = (int32_t)(int16_t)(r>>16);
-					C->c2acc[0][i] = (rl)&0xFFFF;
-					C->c2acc[1][i] = (rh)&0xFFFF;
-					C->c2acc[2][i] = (r>>32);
-					if(rh > 0x7FFF) {
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0x7FFF) {
 						C->c2.h[vd][i] = 0x7FFF;
 					} else if(rh < -0x8000) {
 						C->c2.h[vd][i] = 0x8000;
 					} else {
-						C->c2.h[vd][i] = (uint16_t)rh;
+						C->c2.h[vd][i] = (uint16_t)rm;
 					}
 				}
 				break;
@@ -86,18 +88,19 @@ switch(rs) {
 					r <<= 1;
 					r += 0x8000;
 					int32_t rl = (int32_t)(int16_t)r;
-					int32_t rh = (int32_t)(int16_t)(r>>16);
-					C->c2acc[0][i] = (rl)&0xFFFF;
-					C->c2acc[1][i] = (rh)&0xFFFF;
-					C->c2acc[2][i] = 0;
-					if(rh > 0xFFFF) {
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0xFFFF) {
 						C->c2acc[2][i] = 0xFFFF;
 						C->c2.h[vd][i] = 0x0000;
-					} else if(rh < 0x0000) {
+					} else if(rm < 0x0000) {
 						C->c2acc[2][i] = 0xFFFF;
 						C->c2.h[vd][i] = 0x0000;
 					} else {
-						C->c2.h[vd][i] = (uint16_t)rh;
+						C->c2.h[vd][i] = (uint16_t)rm;
 					}
 				}
 				break;
@@ -106,23 +109,22 @@ switch(rs) {
 				printf("VMACF %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
-					int32_t acc1 = C->c2acc[0][i];
-					int32_t acc2 = C->c2acc[1][i];
-					int64_t acc = (acc2<<16)|(acc1&0xFFFF);
+					int64_t acc = GET_ACC_FOR_LANE(i);
 					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
 					r <<= 1;
 					r += acc;
 					int32_t rl = (int32_t)(int16_t)r;
-					int32_t rh = (int32_t)(int16_t)(r>>16);
-					C->c2acc[0][i] = (rl)&0xFFFF;
-					C->c2acc[1][i] = (rh)&0xFFFF;
-					C->c2acc[2][i] = (r>>32);
-					if(rh > 0x7FFF) {
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0x7FFF) {
 						C->c2.h[vd][i] = 0x7FFF;
-					} else if(rh < -0x8000) {
+					} else if(rm < -0x8000) {
 						C->c2.h[vd][i] = 0x8000;
 					} else {
-						C->c2.h[vd][i] = (uint16_t)rh;
+						C->c2.h[vd][i] = (uint16_t)rm;
 					}
 				}
 				break;
@@ -131,23 +133,116 @@ switch(rs) {
 				printf("VMACU %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {
 					int j = elparamtab[el][i];
-					int32_t acc1 = C->c2acc[0][i];
-					int32_t acc2 = C->c2acc[1][i];
-					int64_t acc = (acc2<<16)|(acc1&0xFFFF);
+					int64_t acc = GET_ACC_FOR_LANE(i);
 					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
 					r <<= 1;
 					r += acc;
 					int32_t rl = (int32_t)(int16_t)r;
-					int32_t rh = (int32_t)(int16_t)(r>>16);
-					C->c2acc[0][i] = (rl)&0xFFFF;
-					C->c2acc[1][i] = (rh)&0xFFFF;
-					C->c2acc[2][i] = 0;
-					if(rh > 0xFFFF) {
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0xFFFF) {
 						C->c2.h[vd][i] = 0xFFFF;
-					} else if(rh < 0x0000) {
+					} else if(rm < 0x0000) {
 						C->c2.h[vd][i] = 0xFFFF;
 					} else {
-						C->c2.h[vd][i] = (uint16_t)rh;
+						C->c2.h[vd][i] = (uint16_t)rm;
+					}
+				}
+				break;
+
+			case 12: // VMADL
+				printf("VMADL %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t acc = GET_ACC_FOR_LANE(i);
+					int64_t r = (uint64_t)(uint16_t)C->c2.h[vs][i] * (uint64_t)(uint16_t)C->c2.h[vt][j];
+					r >>= 16;
+					r += acc;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rl > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rl < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rl;
+					}
+				}
+				break;
+
+			case 13: // VMADM
+				printf("VMADM %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t acc = GET_ACC_FOR_LANE(i);
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (uint64_t)(uint16_t)C->c2.h[vt][j];
+					r += acc;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rm < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rm;
+					}
+				}
+				break;
+
+			case 14: // VMADN
+				printf("VMADM %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t acc = GET_ACC_FOR_LANE(i);
+					int64_t r = (uint64_t)(uint16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r += acc;
+					int32_t rl = (int32_t)(int16_t)r;
+					int32_t rm = (int32_t)(int16_t)(r>>16);
+					int32_t rh = (int32_t)(int16_t)(r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rl > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rl < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rl;
+					}
+				}
+				break;
+
+			case 15: // VMADH
+				printf("VMADH %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int64_t acc = GET_ACC_FOR_LANE(i);
+					int64_t r = (int64_t)(int16_t)C->c2.h[vs][i] * (int64_t)(int16_t)C->c2.h[vt][j];
+					r <<= 16;
+					r += acc;
+					int32_t rl = r;
+					int32_t rm = (r>>16);
+					int32_t rh = (r>>32);
+					C->c2acc[0][i] = rl;
+					C->c2acc[1][i] = rm;
+					C->c2acc[2][i] = rh;
+					if(rm > 0x7FFF) {
+						C->c2.h[vd][i] = 0x7FFF;
+					} else if(rm < -0x8000) {
+						C->c2.h[vd][i] = 0x8000;
+					} else {
+						C->c2.h[vd][i] = (uint16_t)rm;
 					}
 				}
 				break;
