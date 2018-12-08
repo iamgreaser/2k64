@@ -604,6 +604,46 @@ switch(rs) {
 				}
 				break;
 
+			case 38: // VCR
+				rsp_debug_printf("VCR %2u %2u %2u %X\n", vd, vs, vt, el);
+				C->cc2.n.vcc = 0;
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t xs = (int16_t)C->c2.h[vs][i];
+					int32_t xt = (int16_t)C->c2.h[vt][j];
+					int32_t dist;
+					bool sign = ((xs^xt) < 0);
+					bool le, ge;
+					if(sign) {
+						ge = (xt < 0);
+						le = ((xs+xt+1) <= 0);
+						dist = (le ? ~xt : xs);
+					} else {
+						le = (xt < 0);
+						ge = ((xs-xt) >= 0);
+						dist = (ge ? xt : xs);
+					}
+					C->c2acc[0][i] = dist;
+					C->c2.h[vd][i] = dist;
+					if(ge) { C->cc2.n.vcc |= 0x100<<i; }
+					if(le) { C->cc2.n.vcc |= 0x001<<i; }
+				}
+				C->cc2.n.vco = 0;
+				C->cc2.n.vce = 0;
+				break;
+
+			case 39: // VMRG
+				rsp_debug_printf("VMRG %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t xs = (int16_t)C->c2.h[vs][i];
+					int32_t xt = (int16_t)C->c2.h[vt][j];
+					int32_t r = ((C->cc2.n.vcc & (1<<i)) != 0 ? xs : xt);
+					C->c2acc[0][i] = r;
+					C->c2.h[vd][i] = r;
+				}
+				break;
+
 
 			case 40: // VAND
 				rsp_debug_printf("VAND %2u %2u %2u %X\n", vd, vs, vt, el);
