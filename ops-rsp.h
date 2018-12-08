@@ -523,6 +523,88 @@ switch(rs) {
 				C->cc2.n.vce = 0;
 				break;
 
+			case 36: // VCL
+				rsp_debug_printf("VCL %2u %2u %2u %X\n", vd, vs, vt, el);
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t xt = (int16_t)C->c2.h[vt][j];
+					int32_t xs = (int16_t)C->c2.h[vs][i];
+					bool le = (((C->cc2.n.vcc>>i)&0x001) != 0);
+					bool ge = (((C->cc2.n.vcc>>i)&0x100) != 0);
+					bool vce = (((C->cc2.n.vce>>i)&0x001) != 0);
+					bool eq = (((C->cc2.n.vco>>i)&0x100) == 0);
+					bool sign = (((C->cc2.n.vco>>i)&0x001) != 0);
+
+					int32_t dist = 0;
+					if(sign) {
+						dist = xs + xt;
+						bool carry = (dist > 0xFFFF);
+						if(eq) {
+							le = (vce
+								? ((dist&0xFFFF)==0 || !carry)
+								: (dist&0xFFFF)==0 && !carry
+							);
+						}
+						dist = (le ? -xt : xs);
+						C->c2acc[0][i] = dist;
+					} else {
+						dist = (uint16_t)xs - (uint16_t)xt;
+						if(eq) {
+							ge = (dist >= 0);
+						}
+						dist = (ge ? xt : xs);
+						C->c2acc[0][i] = dist;
+					}
+					C->c2.h[vd][i] = dist;
+					C->cc2.n.vcc &= ~(0x101<<i);
+					if(ge) { C->cc2.n.vcc |= 0x100<<i; }
+					if(le) { C->cc2.n.vcc |= 0x001<<i; }
+				}
+				C->cc2.n.vce = 0;
+				C->cc2.n.vco = 0;
+				break;
+
+			case 37: // VCH
+				rsp_debug_printf("VCH %2u %2u %2u %X\n", vd, vs, vt, el);
+				C->cc2.n.vcc = 0;
+				C->cc2.n.vce = 0;
+				C->cc2.n.vco = 0;
+				for(int i = 0; i < 8; i++) {
+					int j = elparamtab[el][i];
+					int32_t xt = (int16_t)C->c2.h[vt][j];
+					int32_t xs = (int16_t)C->c2.h[vs][i];
+					bool sign = ((xt^xs) < 0);
+
+					int32_t dist = 0;
+					bool le, ge, vce, eq;
+					if(sign) {
+						ge = (xt < 0);
+						le = ((xs+xt) <= 0);
+						vce = ((xs+xt) == -1);
+						eq = ((xs+xt) == 0) || vce;
+						dist = (le ? -xt : xs);
+						C->c2acc[0][i] = dist;
+					} else {
+						le = (xt < 0);
+						ge = ((xs-xt) >= 0);
+						vce = 0;
+						eq = ((xs-xt) == 0);
+						dist = (ge ? xt : xs);
+						C->c2acc[0][i] = dist;
+					}
+					C->c2.h[vd][i] = dist;
+					C->cc2.n.vcc &= ~(0x101<<i);
+					C->cc2.n.vce &= ~(0x001<<i);
+					C->cc2.n.vco &= ~(0x101<<i);
+					if(ge) { C->cc2.n.vcc |= 0x100<<i; }
+					if(le) { C->cc2.n.vcc |= 0x001<<i; }
+					if(!eq) { C->cc2.n.vco |= 0x100<<i; }
+					if(sign) { C->cc2.n.vco |= 0x001<<i; }
+					if(vce) { C->cc2.n.vce |= 0x001<<i; }
+				}
+				break;
+
+
 			case 40: // VAND
 				rsp_debug_printf("VAND %2u %2u %2u %X\n", vd, vs, vt, el);
 				for(int i = 0; i < 8; i++) {

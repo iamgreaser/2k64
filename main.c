@@ -20,7 +20,7 @@
 #define DEBUG_SP 1
 #define DEBUG_VI 1
 
-#if 0
+#if 1
 #define rsp_debug_printf printf
 #else
 #define rsp_debug_printf(...)
