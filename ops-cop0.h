@@ -81,6 +81,11 @@ switch(rs) {
 				C->regs[rt] = C->c0.n.entryhi;
 				SIGNEX32R(C, rt);
 			} break;
+		case 11: // c0_compare
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.compare;
+				SIGNEX32R(C, rt);
+			} break;
 		case 12: // c0_sr
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.sr;
@@ -130,6 +135,40 @@ switch(rs) {
 		case 3: // DMA_WRITE_LENGTH
 			printf("DMA_WRITE_LENGTH %08X\n", C->regs[rt]);
 			C->c0.n.dma_write_length = C->regs[rt];
+			break;
+
+		case 4: {
+			uint32_t data = C->regs[rt];
+			if((data & 0x00000001) != 0) { C->c0.n.sp_status &= ~0x0001; }
+			if((data & 0x00000002) != 0) { C->c0.n.sp_status |=  0x0001; }
+			if((data & 0x00000004) != 0) { C->c0.n.sp_status &= ~0x0002; }
+			if((data & 0x00000008) != 0) { C->rsp_intr = false; }
+			if((data & 0x00000010) != 0) { C->rsp_intr = true; }
+			if((data & 0x00000020) != 0) { C->c0.n.sp_status &= ~0x0020; }
+			if((data & 0x00000040) != 0) { C->c0.n.sp_status |=  0x0020; }
+			if((data & 0x00000080) != 0) { C->c0.n.sp_status &= ~0x0040; }
+			if((data & 0x00000100) != 0) { C->c0.n.sp_status |=  0x0040; }
+			if((data & 0x00000200) != 0) { C->c0.n.sp_status &= ~0x0080; }
+			if((data & 0x00000400) != 0) { C->c0.n.sp_status |=  0x0080; }
+			if((data & 0x00000800) != 0) { C->c0.n.sp_status &= ~0x0100; }
+			if((data & 0x00001000) != 0) { C->c0.n.sp_status |=  0x0100; }
+			if((data & 0x00002000) != 0) { C->c0.n.sp_status &= ~0x0200; }
+			if((data & 0x00004000) != 0) { C->c0.n.sp_status |=  0x0200; }
+			if((data & 0x00008000) != 0) { C->c0.n.sp_status &= ~0x0400; }
+			if((data & 0x00010000) != 0) { C->c0.n.sp_status |=  0x0400; }
+			if((data & 0x00020000) != 0) { C->c0.n.sp_status &= ~0x0800; }
+			if((data & 0x00040000) != 0) { C->c0.n.sp_status |=  0x0800; }
+			if((data & 0x00080000) != 0) { C->c0.n.sp_status &= ~0x1000; }
+			if((data & 0x00100000) != 0) { C->c0.n.sp_status |=  0x1000; }
+			if((data & 0x00200000) != 0) { C->c0.n.sp_status &= ~0x2000; }
+			if((data & 0x00400000) != 0) { C->c0.n.sp_status |=  0x2000; }
+		} break;
+
+		case 7: // SP_RESERVED
+			printf("SP_RESERVED %08X\n", C->regs[rt]);
+			if(C->regs[rt] == 0) {
+				C->c0.n.sp_reserved = 0;
+			}
 			break;
 
 		case 8: // CMD_START
@@ -193,12 +232,13 @@ switch(rs) {
 
 		case 11: // c0_compare
 			C->c0.n.compare = (SREG)(int32_t)C->regs[rt];
+			C->c0.n.cause &= ~0x8000;
 			break;
 
 		case 12: // c0_sr
 			C->c0.n.sr &= ~0xFF77FFFF;
 			C->c0.n.sr |= (C->regs[rt] & 0xFF57FFFF);
-			printf("set SR = %08X (pc=%016llX)\n", C->c0.n.sr, C->pc);
+			//printf("set SR = %08X (pc=%016llX sp=%016llX)\n", C->c0.n.sr, C->pc, C->regs[29]);
 			e = MIPSXNAME(_probe_interrupts)(C);
 			if(e != MER_NONE) {
 				e_ifetch = e;
@@ -255,6 +295,16 @@ switch(rs) {
 
 	case 16: switch(op&0x3F) {
 #ifdef MIPS_MMU_ENTRIES
+		case 1: // TLBR
+		{
+			int idx = (C->c0.n.index);
+			idx &= (MIPS_MMU_ENTRIES-1);
+			C->c0.n.entrylo0 = C->tlb[idx].entrylo[0];
+			C->c0.n.entrylo1 = C->tlb[idx].entrylo[1];
+			C->c0.n.entryhi = C->tlb[idx].entryhi;
+			C->c0.n.pagemask = C->tlb[idx].pagemask;
+		} break;
+
 		case 2: // TLBWI
 		case 6: // TLBWR
 		{
@@ -301,7 +351,7 @@ switch(rs) {
 
 		case 24: // ERET
 		{
-			printf("ERET start (SR=%08X PC=%08X)\n", C->c0.n.sr, C->pc);
+			printf("ERET start (SR=%08X PC=%016llX)\n", C->c0.n.sr, C->pc);
 			if((C->c0.n.sr & C0SR_ERL) != 0) {
 				C->pc = C->c0.n.errorepc;
 				C->c0.n.sr &= ~C0SR_ERL;
@@ -309,7 +359,7 @@ switch(rs) {
 				C->pc = C->c0.n.epc;
 				C->c0.n.sr &= ~C0SR_EXL;
 			}
-			printf("ERET (SR=%08X PC=%08X)\n", C->c0.n.sr, C->pc);
+			printf("ERET (SR=%08X PC=%016llX SP=%016llX)\n", C->c0.n.sr, C->pc, C->regs[29]);
 
 			C->llbit = false;
 

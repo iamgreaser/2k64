@@ -806,6 +806,38 @@ switch(op>>26U) {
 		uint32_t v_offset = (uint32_t)(((int32_t)(op<<25))>>25);
 		switch(v_opcode)
 		{
+			// LBV
+			case 0: {
+				rsp_debug_printf("LBV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				MIPSXNAME(_read8)(C, C->regs[v_base]+(v_offset<<0), &mdata);
+				if((v_element&0x1) == 0) {
+					C->c2.h[v_vt][v_element>>1] &= ~0xFF00;
+					C->c2.h[v_vt][v_element>>1] |= mdata<<8;
+				} else {
+					C->c2.h[v_vt][v_element>>1] &= ~0x00FF;
+					C->c2.h[v_vt][v_element>>1] |= mdata&0xFF;
+				}
+			} break;
+
+			// LSV
+			case 1: {
+				rsp_debug_printf("LSV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert((v_element&0x1) == 0);
+				MIPSXNAME(_read8)(C, C->regs[v_base]+(v_offset<<1), &mdata);
+				C->c2.h[v_vt][v_element>>1] = mdata;
+			} break;
+
+			// LDV
+			case 3: {
+				rsp_debug_printf("LDV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert((v_element&0x7) == 0);
+				MIPSXNAME(_read8)(C, C->regs[v_base]+(v_offset<<1), &mdata);
+				for(int i = 0; i < 4; i++) {
+					MIPSXNAME(_read16)(C, C->regs[v_base]+(i<<1)+(v_offset<<3), &mdata);
+					C->c2.h[v_vt][i+(v_element>>1)] = mdata;
+				}
+			} break;
+
 			// LQV
 			case 4: {
 				rsp_debug_printf("LQV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
@@ -814,6 +846,26 @@ switch(op>>26U) {
 				for(int i = 0; i < 8; i++) {
 					MIPSXNAME(_read16)(C, C->regs[v_base]+(i<<1)+(v_offset<<4), &mdata);
 					C->c2.h[v_vt][i] = mdata;
+				}
+			} break;
+
+			// LPV
+			case 6: {
+				rsp_debug_printf("LPV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert(v_element == 0);
+				for(int i = 0; i < 8; i++) {
+					MIPSXNAME(_read8)(C, C->regs[v_base]+(i<<1)+(v_offset<<4), &mdata);
+					C->c2.h[v_vt][i] = mdata<<8;
+				}
+			} break;
+
+			// LUV
+			case 7: {
+				rsp_debug_printf("LUV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert(v_element == 0);
+				for(int i = 0; i < 8; i++) {
+					MIPSXNAME(_read8)(C, C->regs[v_base]+(i<<1)+(v_offset<<4), &mdata);
+					C->c2.h[v_vt][i] = (mdata&0xFF)<<7;
 				}
 			} break;
 

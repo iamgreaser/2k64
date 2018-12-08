@@ -30,13 +30,11 @@ switch(rs) {
 	} break;
 
 	case 4: // MTCz
-	switch(rd) {
-		default:
-			printf("RI MTC2 %2u %08X -> %08X %d (COP2)\n"
-				, rd, op_pc, new_pc, op_was_branch
-				);
-			MIPSXNAME(_throw_exception)(C, op_pc, MER_RI, op_was_branch);
-			return MER_RI;
+	{
+		int i = (op>>7)&0xF;
+		rsp_debug_printf("MTC2 %d, %d[%d]\n", rt, rd, i);
+		assert((i&0x1) == 0);
+		C->c2.h[rd][e>>1] = C->regs[rt];
 	} break;
 
 

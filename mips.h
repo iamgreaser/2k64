@@ -233,15 +233,25 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 {
 	assert(cause >= MER_Int && cause <= MER_Ov);
 
-	printf("Throw exception %016llX, cause %d\n", (unsigned long long)epc, ((int)cause)-1);
-
-	for(int i = 0; i < 32; i++) {
-		//printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
 #ifdef MIPS_IS_RSP
-		printf("$%s = %08X | $c0_%-2d = %08X | $v%-2d = %016llX%016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c2.d[i][0], C->c2.d[i][1]);
+	bool show_throws = true;
 #else
-		printf("$%s = %016llX | $c0_%-2d = %016llX | $f%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c1.di[i]);
+	bool show_throws = true;
 #endif
+
+	if(show_throws) {
+		printf("Throw exception %016llX, cause %d\n", (unsigned long long)epc, ((int)cause)-1);
+	}
+
+	if(show_throws) { // && cause != MER_Int) {
+		for(int i = 0; i < 32; i++) {
+			//printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
+#ifdef MIPS_IS_RSP
+			printf("$%s = %08X | $c0_%-2d = %08X | $v%-2d = %016llX%016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c2.d[i][0], C->c2.d[i][1]);
+#else
+			printf("$%s = %016llX | $c0_%-2d = %016llX | $f%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c1.di[i]);
+#endif
+		}
 	}
 
 #if 0
@@ -266,9 +276,11 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	// Halt RSP.
 	C->c0.n.sp_status |= 0x00000001;
 #else
-	MIPSXNAME(_read32)(C, epc, &opdata);
-	printf("op refetch = %08X\n", opdata);
-	printf("badvaddr = %016llX\n", (unsigned long long)C->c0.n.badvaddr);
+	if(show_throws) {
+		MIPSXNAME(_read32)(C, epc, &opdata);
+		printf("op refetch = %08X\n", opdata);
+		printf("badvaddr = %016llX\n", (unsigned long long)C->c0.n.badvaddr);
+	}
 	//fflush(stdout); abort();
 
 	// Set up PC + op
@@ -303,7 +315,9 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 
 	// Enter exception mode
 	C->c0.n.sr |= C0SR_EXL;
-	printf("new PC = %08X\n", C->pc);
+	if(show_throws) {
+		printf("new PC = %08X\n", C->pc);
+	}
 #endif
 }
 
@@ -761,6 +775,9 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 #ifndef MIPS_IS_RSP
 	C->c0.n.count += 1;
+	if((C->c0.n.count&0x1FFFFFFE) == ((C->c0.n.compare & 0xFFFFFFFF)<<1)) {
+		C->c0.n.cause |= 0x8000;
+	}
 #endif
 
 #ifdef MIPS_IS_RSP
@@ -818,6 +835,13 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 	// Copy new op
 	C->pl0_op = new_op;
 	C->pl0_pc = new_pc;
+
+	// Handle interrupts
+	e = MIPSXNAME(_probe_interrupts)(C);
+	if(e != MER_NONE) {
+		MIPSXNAME(_throw_exception)(C, new_pc, e, C->pl0_is_branch);
+		return e;
+	}
 
 	// Return
 	return MER_NONE;

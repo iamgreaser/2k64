@@ -17,6 +17,8 @@
 #define DEBUG_DP 1
 #define DEBUG_MI 1
 #define DEBUG_PI 1
+#define DEBUG_RI 1
+#define DEBUG_SI 1
 #define DEBUG_SP 1
 #define DEBUG_VI 1
 
@@ -26,7 +28,7 @@
 #define rsp_debug_printf(...)
 #endif
 
-#if 0
+#if 1
 #define rdp_debug_printf printf
 #else
 #define rdp_debug_printf(...)
@@ -121,6 +123,9 @@ double n64_round(double v)
 
 struct vr4300;
 struct rsp;
+static struct vr4300 vr4300_baseinst;
+static struct rsp rsp_baseinst;
+
 enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data);
 void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t data);
 enum mipserr n64rsp_mem_read(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t *data);
@@ -131,32 +136,6 @@ uint32_t dpc_end = 0;
 uint32_t dpc_end_saved = 0;
 uint32_t dpc_current = 0;
 uint32_t dpc_status = 0;
-
-// VR4300 core
-#define MIPS_IS_VR4300
-#define MIPSNAME vr4300
-#define MIPSXNAME(x) vr4300##x
-#define MIPS_MEM_READ n64primary_mem_read
-#define MIPS_MEM_WRITE n64primary_mem_write
-#include "mips.h"
-#undef MIPS_MEM_READ
-#undef MIPS_MEM_WRITE
-#undef MIPSNAME
-#undef MIPSXNAME
-#undef MIPS_IS_VR4300
-
-// RSP core
-#define MIPS_IS_RSP
-#define MIPSNAME rsp
-#define MIPSXNAME(x) rsp##x
-#define MIPS_MEM_READ n64rsp_mem_read
-#define MIPS_MEM_WRITE n64rsp_mem_write
-#include "mips.h"
-#undef MIPS_MEM_READ
-#undef MIPS_MEM_WRITE
-#undef MIPSNAME
-#undef MIPSXNAME
-#undef MIPS_IS_RSP
 
 uint32_t pifimg[2*256];
 #define RAM_SIZE_WORDS (8*1024*256)
@@ -184,11 +163,65 @@ uint32_t pi_status = 0;
 uint32_t vi_status_reg = 0;
 uint32_t vi_origin_reg = 0;
 uint32_t vi_width_reg = 640;
+uint32_t vi_intr_reg = 0;
 uint32_t vi_x_scale_reg = 0;
 uint32_t vi_y_scale_reg = 0;
 
 uint32_t mi_intr_reg = 0;
 uint32_t mi_intr_mask = 0;
+
+uint64_t global_clock = 0;
+
+void n64_update_interrupts(void);
+
+void n64_set_interrupt(int flag)
+{
+	mi_intr_reg |= flag;
+	n64_update_interrupts();
+}
+
+void n64_clear_interrupt(int flag)
+{
+	mi_intr_reg &= ~flag;
+	n64_update_interrupts();
+}
+
+// VR4300 core
+#define MIPS_IS_VR4300
+#define MIPSNAME vr4300
+#define MIPSXNAME(x) vr4300##x
+#define MIPS_MEM_READ n64primary_mem_read
+#define MIPS_MEM_WRITE n64primary_mem_write
+#include "mips.h"
+#undef MIPS_MEM_READ
+#undef MIPS_MEM_WRITE
+#undef MIPSNAME
+#undef MIPSXNAME
+#undef MIPS_IS_VR4300
+
+// RSP core
+#define MIPS_IS_RSP
+#define MIPSNAME rsp
+#define MIPSXNAME(x) rsp##x
+#define MIPS_MEM_READ n64rsp_mem_read
+#define MIPS_MEM_WRITE n64rsp_mem_write
+#include "mips.h"
+#undef MIPS_MEM_READ
+#undef MIPS_MEM_WRITE
+#undef MIPSNAME
+#undef MIPSXNAME
+#undef MIPS_IS_RSP
+
+void n64_update_interrupts(void)
+{
+	struct vr4300 *C = &vr4300_baseinst;
+
+	if((mi_intr_reg & mi_intr_mask) != 0) {
+		C->c0.n.cause |=  0x0400;
+	} else {
+		C->c0.n.cause &= ~0x0400;
+	}
+}
 
 struct {
 	char *cic_type;
@@ -212,11 +245,6 @@ struct {
 		},
 	},
 };
-
-static struct vr4300 vr4300_baseinst;
-static struct rsp rsp_baseinst;
-
-uint64_t global_clock = 0;
 
 enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data)
 {
@@ -367,9 +395,10 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 				// FIXME learn how this actually works
 				data_out = (global_clock / 6250) % 262;
 				if(data_out >= 240) {
-					data_out -= 240;
-					data_out += 0x200;
+					data_out += 256-240;
 				}
+				data_out <<= 1;
+				data_out |= (global_clock / (6250*262)) & 0x1;
 				break;
 			default:
 				data_out = 0;
@@ -457,7 +486,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		//if(C->pl0_pc != 0xFFFFFFFFA400039CULL) {
 		{
 		// FIXME: DETECT EXPANSION PAK PROPERLY
-		data = 8*1024*1024;
+		//data = 8*1024*1024;
 		//printf("DEBUG ABORT: %08X (%016llX)\n", data, C->pl0_pc);
 		//fsync(ram_fd);
 		//abort();
@@ -614,11 +643,8 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				if((data&0x0200) != 0) { mi_intr_mask |=  0x0010; }
 				if((data&0x0400) != 0) { mi_intr_mask &= ~0x0020; }
 				if((data&0x0800) != 0) { mi_intr_mask |=  0x0020; }
-				if((mi_intr_reg & mi_intr_mask) != 0) {
-					C->c0.n.cause |=  0x0400;
-				} else {
-					C->c0.n.cause &= ~0x0400;
-				}
+				n64_update_interrupts();
+				printf("INTR MASK %08X\n", mi_intr_mask);
 				break;
 		}
 		return;
@@ -640,13 +666,11 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 			case 0x04400008: // VI_WIDTH_REG
 				vi_width_reg = data & 0x00000FFF;
 				break;
+			case 0x0440000C: // VI_INTR_REG
+				vi_intr_reg = data & 0x000003FF;
+				break;
 			case 0x04400010: // VI_CURRENT_REG
-				mi_intr_reg &= ~0x08; // VI interrupt
-				if((mi_intr_reg & mi_intr_mask) != 0) {
-					C->c0.n.cause |=  0x0400;
-				} else {
-					C->c0.n.cause &= ~0x0400;
-				}
+				n64_clear_interrupt(0x08); // VI interrupt
 				break;
 			case 0x04400030: // VI_X_SCALE_REG
 				vi_x_scale_reg = data & 0x0FFF0FFF;
@@ -689,6 +713,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				pi_status |= 0x1;
 				break;
 			case 0x04600010: // PI_STATUS_REG
+				if((data & 0x0002) != 0) { n64_clear_interrupt(0x10); }
 				break;
 			default:
 				break;
@@ -712,6 +737,8 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 			uint32_t *dst = &ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))];
 			memcpy(dst, src, pi_wr_len);
 			pi_wr_len = 0;
+			printf("PI DMA WRITE\n");
+			n64_set_interrupt(0x10);
 		}
 		pi_status &= ~0x1;
 
@@ -1012,14 +1039,14 @@ int main(int argc, char *argv[])
 		*/
 
 		// FIXME find out when this really happens
+		if(global_clock % (6250*262) == 6250*(vi_intr_reg>>1)) {
+			//C->c0.n.cause |= 0x8000;
+			n64_set_interrupt(0x08); // VI interrupt
+		}
+
+		// FIXME also find out when this really happens
 		if(global_clock % (6250*262) == 6250*240) {
 			printf(" - NEW FRAME - \n");
-			mi_intr_reg |= 0x08; // VI interrupt
-			if((mi_intr_reg & mi_intr_mask) != 0) {
-				C->c0.n.cause |=  0x0400;
-			} else {
-				C->c0.n.cause &= ~0x0400;
-			}
 			SDL_LockSurface(surface);
 #include "vi-render.h"
 			SDL_UnlockSurface(surface);
