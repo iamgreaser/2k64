@@ -858,6 +858,20 @@ switch(op>>26U) {
 				}
 			} break;
 
+			// SWV
+			case 10: {
+				rsp_debug_printf("SWV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert((v_element&0x1) == 0);
+				for(int i = 0; i < 8; i++) {
+					MIPSXNAME(_write16)(C,
+						C->regs[v_base]
+						+(i<<1)
+						+(v_offset<<4),
+						C->c2.h[v_vt][((i+(v_element>>1))&0x7)]
+					);
+				}
+			} break;
+
 			// STV
 			case 11: {
 				rsp_debug_printf("STV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
