@@ -105,12 +105,12 @@ uint32_t rdp_tile_idx = 0;
 uint32_t rdp_tile_palette = 0;
 bool rdp_tile_ct = false;
 bool rdp_tile_mt = false;
-uint32_t rdp_mask_t = 0;
-uint32_t rdp_shift_t = 0;
+uint32_t rdp_tile_mask_t = 0;
+uint32_t rdp_tile_shift_t = 0+5;
 bool rdp_tile_cs = false;
 bool rdp_tile_ms = false;
-uint32_t rdp_mask_s = 0;
-uint32_t rdp_shift_s = 0;
+uint32_t rdp_tile_mask_s = 0;
+uint32_t rdp_tile_shift_s = 0+5;
 
 // 0x37 Set Fill Color
 uint32_t rdp_fill_color = 0;
@@ -170,17 +170,6 @@ void rdp_run_one_command(void) {
 			uint32_t tile = (cmd>>24)&0x7;
 			uint32_t sh = (cmd>>12)&0xFFF;
 			uint32_t th = (cmd>>0)&0xFFF;
-			sl >>= 2;
-			tl >>= 2;
-			sh >>= 2;
-			th >>= 2;
-			switch(rdp_tile_size)
-			{
-				case 0: sl >>= 1; sh >>= 1; break;
-				case 1: break;
-				case 2: sl <<= 1; sh <<= 1; break;
-				case 3: sl <<= 2; sh <<= 2; break;
-			}
 			rdp_debug_printf("Render %d,%d -> %d,%d\n", sl, tl, sh, th);
 
 			int16_t s = (rdp_cmd_buffer[1]>>48);
@@ -201,37 +190,27 @@ void rdp_run_one_command(void) {
 			yh >>= 2;
 			xl >>= 2;
 			yl >>= 2;
-			rdp_debug_printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
-			uint32_t acc_t = t;
+			int tmem_stride = (rdp_tile_line+0)<<3;
+			int dram_stride = (rdp_color_image_width+1);
+			rdp_debug_printf("Render %d,%d -> %d,%d w=%d\n", xl, yl, xh, yh, tmem_stride);
+			int16_t acc_t = t;
 			switch(rdp_color_image_size)
 			{
-				case 2: // 15bpp
-					for(int y = yl; y < yh; y++) {
-						uint32_t acc_s = s;
-						uint32_t tmem_offs = (rdp_tile_tmem_addr<<1);
-						uint32_t dram_offs = (rdp_color_image_addr>>2);
-						tmem_offs += ((rdp_tile_line+1)<<1)*((acc_t>>5)&0x3F);
-						dram_offs += ((rdp_color_image_width+1)>>1)*y;
-						for(int x = xl; x < xh; x++) {
-							ram[(dram_offs+x)&RAM_SIZE_WORDS-1]
-							= rdp_tmem[(tmem_offs
-								+((acc_s>>5)&0x3F)
-							)&0x3FF];
-						}
-					}
-					break;
 				case 3: // 32bpp
-					for(int y = yl; y < yh; y++) {
-						uint32_t acc_s = s;
-						uint32_t tmem_offs = (rdp_tile_tmem_addr<<1);
+					for(int y = yl; y < yh; y++, acc_t += dtdy) {
+						int16_t acc_s = s;
+						uint32_t tmem_offs = (rdp_tile_tmem_addr<<3);
 						uint32_t dram_offs = (rdp_color_image_addr>>2);
-						tmem_offs += ((rdp_tile_line+1)<<1)*((acc_t>>5)&0x3F);
-						dram_offs += ((rdp_color_image_width+1))*y;
-						for(int x = xl; x < xh; x++) {
-							ram[(dram_offs+x)&RAM_SIZE_WORDS-1]
-							= rdp_tmem[(tmem_offs
-								+((acc_s>>5)&0x3F)
+						tmem_offs += tmem_stride*((acc_t>>rdp_tile_shift_t)&rdp_tile_mask_t);
+						dram_offs += dram_stride*y;
+						for(int x = xl; x < xh; x++, acc_s += dsdx) {
+							uint32_t data = rdp_tmem[(tmem_offs
+								+((acc_s>>rdp_tile_shift_s)&rdp_tile_mask_s)
 							)&0x3FF];
+							// FIXME this is a kludge
+							if((data&0x00000080) != 0) {
+								ram[(dram_offs+x)&RAM_SIZE_WORDS-1] = data;
+							}
 						}
 					}
 					break;
@@ -292,24 +271,33 @@ void rdp_run_one_command(void) {
 				uint32_t tile = (cmd>>24)&0x7;
 				uint32_t sh = (cmd>>12)&0xFFF;
 				uint32_t th = (cmd>>0)&0xFFF;
+				rdp_debug_printf("Load %d,%d -> %d,%d\n", sl, tl, sh, th);
 				sl >>= 2;
-				tl >>= 2;
 				sh >>= 2;
+				tl >>= 2;
 				th >>= 2;
 				switch(rdp_tile_size)
 				{
-					case 0: sl >>= 1; sh >>= 1; break;
-					case 1: break;
-					case 2: sl <<= 1; sh <<= 1; break;
-					case 3: sl <<= 2; sh <<= 2; break;
+					case 0: sl >>= 3; sh >>= 3; break;
+					case 1: sl >>= 2; sh >>= 2; break;
+					case 2: sl >>= 1; sh >>= 1; break;
+					case 3: sl >>= 0; sh >>= 0; break;
 				}
-				rdp_debug_printf("Load %d,%d -> %d,%d\n", sl, tl, sh, th);
-				for(int y = tl; y <= th; y++) {
-					uint32_t tmem_offs = (rdp_tile_tmem_addr<<1);
+				sl <<= 1;
+				sh += 1;
+				sh <<= 1;
+				tl <<= 1;
+				th += 1;
+				th <<= 1;
+				int tmem_stride = (rdp_tile_line+0)<<3;
+				int dram_stride = (rdp_texture_image_width+1);
+				rdp_debug_printf("Load %d,%d -> %d,%d - w=%d\n", sl, tl, sh, th, tmem_stride);
+				for(int y = tl; y < th; y++) {
+					uint32_t tmem_offs = (rdp_tile_tmem_addr<<3);
 					uint32_t dram_offs = (rdp_texture_image_addr>>2);
-					tmem_offs += ((rdp_tile_line+1)<<1)*y;
-					dram_offs += ((rdp_texture_image_width+1)<<4)*y;
-					for(int x = sl; x <= sh; x++) {
+					tmem_offs += tmem_stride*y;
+					dram_offs += dram_stride*y;
+					for(int x = sl; x < sh; x++) {
 						rdp_tmem[(tmem_offs+x)&0x3FF] = ram[(dram_offs+x)&RAM_SIZE_WORDS-1];
 					}
 				}
@@ -327,12 +315,25 @@ void rdp_run_one_command(void) {
 			rdp_tile_palette = (cmd>>20)&0xF;
 			rdp_tile_ct = ((cmd>>19)&0x1)!=0;
 			rdp_tile_mt = ((cmd>>18)&0x1)!=0;
-			rdp_mask_t = (cmd>>14)&0xF;
-			rdp_shift_t = (cmd>>10)&0xF;
+			rdp_tile_mask_t = (cmd>>14)&0xF;
+			rdp_tile_shift_t = (cmd>>10)&0xF;
 			rdp_tile_cs = ((cmd>>9)&0x1)!=0;
 			rdp_tile_ms = ((cmd>>8)&0x1)!=0;
-			rdp_mask_s = (cmd>>4)&0xF;
-			rdp_shift_s = (cmd>>0)&0xF;
+			rdp_tile_mask_s = (cmd>>4)&0xF;
+			rdp_tile_shift_s = (cmd>>0)&0xF;
+
+			rdp_tile_shift_t += 10;
+			rdp_tile_shift_s += 10;
+
+			// TODO: clamp
+			if(rdp_tile_mask_s == 0) { rdp_tile_mask_s = 0xF; }
+			if(rdp_tile_mask_t == 0) { rdp_tile_mask_t = 0xF; }
+			rdp_tile_mask_s += 1;
+			rdp_tile_mask_t += 1;
+			rdp_tile_mask_s <<= 2;
+			rdp_tile_mask_t <<= 2;
+			rdp_tile_mask_s -= 1;
+			rdp_tile_mask_t -= 1;
 
 			rdp_cmd_len = 0;
 			break;
@@ -453,7 +454,7 @@ void rdp_run_commands(void)
 		if((dpc_status & (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) == (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) {
 			dpc_current = dpc_start;
 			dpc_end_saved = dpc_end;
-			dpc_status &= (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID);
+			dpc_status &= ~(RDSR_CMD_START_VALID|RDSR_CMD_END_VALID);
 
 			// Set busy
 			dpc_status |= (1<<8);
