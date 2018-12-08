@@ -26,7 +26,7 @@
 #define rsp_debug_printf(...)
 #endif
 
-#if 1
+#if 0
 #define rdp_debug_printf printf
 #else
 #define rdp_debug_printf(...)
