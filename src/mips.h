@@ -275,6 +275,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 
 	// Halt RSP.
 	C->c0.n.sp_status |= 0x00000001;
+	printf("RSP HALTED\n");
 #else
 	if(show_throws) {
 		MIPSXNAME(_read32)(C, epc, &opdata);
