@@ -167,7 +167,12 @@ struct MIPSNAME
 
 enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data);
 
+void MIPSXNAME(_cpu_init)(struct MIPSNAME *C);
+enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C);
+
+#ifdef GENERATE_MIPS
 #include "mips-core.h"
+#endif
 
 #include "mips-undefs.h"
 

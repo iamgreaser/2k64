@@ -68,7 +68,7 @@ enum mipserr
 #define C0CONFIG_EC_mask (0x7<<28)
 #define C0CONFIG_EC_shift 28
 
-const char *mips_gpr_names[32] = {
+static const char *mips_gpr_names[32] = {
 	"z0", // "zero" but I like to fit these into two chars
 	"at",
 	"v0", "v1",

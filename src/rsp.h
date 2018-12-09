@@ -1,3 +1,6 @@
+#ifdef GENERATE_MIPS_RSP
+#define GENERATE_MIPS
+#endif
 #define MIPS_IS_RSP
 #define MIPSNAME rsp
 #define MIPSXNAME(x) rsp##x
@@ -9,3 +12,6 @@
 #undef MIPSNAME
 #undef MIPSXNAME
 #undef MIPS_IS_RSP
+#ifdef GENERATE_MIPS_RSP
+#undef GENERATE_MIPS
+#endif

@@ -1,72 +1,4 @@
-#include <assert.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <errno.h>
-
-#include <time.h>
-
-#include <SDL.h>
-#include <signal.h>
-
-#include "reciprocal-table.h"
-
-#define DEBUG_AI 1
-#define DEBUG_DP 1
-#define DEBUG_MI 1
-#define DEBUG_PI 1
-#define DEBUG_RI 1
-#define DEBUG_SI 1
-#define DEBUG_SP 1
-#define DEBUG_VI 1
-
-#if 1
-#define rsp_debug_printf printf
-#else
-#define rsp_debug_printf(...)
-#endif
-
-#if 1
-#define rdp_debug_printf printf
-#else
-#define rdp_debug_printf(...)
-#endif
-
-#define RAM_TO_FILE 0
-
-#if RAM_TO_FILE
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-int ram_fd = -1;
-#endif
-
-const uint8_t elparamtab[16][8] = {
-	// beg, end, step, (pad)
-	{0, 1, 2, 3, 4, 5, 6, 7,},
-	{0, 1, 2, 3, 4, 5, 6, 7,}, // TODO: FIND WHAT THIS DOES
-
-	{0, 0, 2, 2, 4, 4, 6, 6,},
-	{1, 1, 3, 3, 5, 5, 7, 7,},
-
-	{0, 0, 0, 0, 4, 4, 4, 4,},
-	{1, 1, 1, 1, 5, 5, 5, 5,},
-	{2, 2, 2, 2, 6, 6, 6, 6,},
-	{3, 3, 3, 3, 7, 7, 7, 7,},
-
-	{0, 0, 0, 0, 0, 0, 0, 0,},
-	{1, 1, 1, 1, 1, 1, 1, 1,},
-	{2, 2, 2, 2, 2, 2, 2, 2,},
-	{3, 3, 3, 3, 3, 3, 3, 3,},
-	{4, 4, 4, 4, 4, 4, 4, 4,},
-	{5, 5, 5, 5, 5, 5, 5, 5,},
-	{6, 6, 6, 6, 6, 6, 6, 6,},
-	{7, 7, 7, 7, 7, 7, 7, 7,},
-};
+#include "common.h"
 
 SDL_Window *window;
 SDL_Surface *window_surface;
@@ -121,15 +53,8 @@ double n64_round(double v)
 
 #include "mips-common.h"
 
-struct vr4300;
-struct rsp;
 static struct vr4300 vr4300_baseinst;
 static struct rsp rsp_baseinst;
-
-enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data);
-void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t data);
-enum mipserr n64rsp_mem_read(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t *data);
-void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t data);
 
 uint32_t dpc_start = 0;
 uint32_t dpc_end = 0;

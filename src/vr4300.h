@@ -1,3 +1,6 @@
+#ifdef GENERATE_MIPS_VR4300
+#define GENERATE_MIPS
+#endif
 #define MIPS_IS_VR4300
 #define MIPSNAME vr4300
 #define MIPSXNAME(x) vr4300##x
@@ -9,3 +12,6 @@
 #undef MIPSNAME
 #undef MIPSXNAME
 #undef MIPS_IS_VR4300
+#ifdef GENERATE_MIPS_VR4300
+#undef GENERATE_MIPS
+#endif
