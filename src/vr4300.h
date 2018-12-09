@@ -6,7 +6,7 @@
 #define MIPSXNAME(x) vr4300##x
 #define MIPS_MEM_READ n64primary_mem_read
 #define MIPS_MEM_WRITE n64primary_mem_write
-#include "mips.h"
+#include "mips/mips.h"
 #undef MIPS_MEM_READ
 #undef MIPS_MEM_WRITE
 #undef MIPSNAME

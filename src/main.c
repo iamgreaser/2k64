@@ -51,7 +51,7 @@ double n64_round(double v)
 	}
 }
 
-#include "mips-common.h"
+#include "mips/mips-common.h"
 
 static struct vr4300 vr4300_baseinst;
 static struct rsp rsp_baseinst;

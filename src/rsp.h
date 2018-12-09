@@ -6,7 +6,7 @@
 #define MIPSXNAME(x) rsp##x
 #define MIPS_MEM_READ n64rsp_mem_read
 #define MIPS_MEM_WRITE n64rsp_mem_write
-#include "mips.h"
+#include "mips/mips.h"
 #undef MIPS_MEM_READ
 #undef MIPS_MEM_WRITE
 #undef MIPSNAME

@@ -1,6 +1,6 @@
-#include "mips-common.h"
+#include "mips/mips-common.h"
 
-#include "mips-defs.h"
+#include "mips/defs.h"
 
 struct MIPSNAME
 {
@@ -171,8 +171,8 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C);
 enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C);
 
 #ifdef GENERATE_MIPS
-#include "mips-core.h"
+#include "mips/core.h"
 #endif
 
-#include "mips-undefs.h"
+#include "mips/undefs.h"
 

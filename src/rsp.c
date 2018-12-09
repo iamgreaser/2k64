@@ -1,6 +1,6 @@
 #include "common.h"
 
-#include "reciprocal-table.h"
+#include "mips/reciprocal-table.h"
 
 const uint8_t elparamtab[16][8] = {
 	// beg, end, step, (pad)
