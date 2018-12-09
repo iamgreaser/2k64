@@ -1,3 +1,5 @@
+#ifndef _MIPS_COMMON_H
+#define _MIPS_COMMON_H 1
 enum mipserr
 {
 	// not errors, just extra info
@@ -82,4 +84,6 @@ const char *mips_gpr_names[32] = {
 	"k0", "k1",
 	"gp", "sp", "fp", "ra",
 };
+
+#endif
 

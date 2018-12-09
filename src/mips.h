@@ -1,3 +1,5 @@
+#include "mips-common.h"
+
 #include "mips-defs.h"
 
 struct MIPSNAME

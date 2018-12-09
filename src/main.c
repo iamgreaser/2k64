@@ -172,6 +172,10 @@ uint32_t mi_intr_mask = 0;
 
 uint64_t global_clock = 0;
 
+// MIPS CPUs
+#include "vr4300.h"
+#include "rsp.h"
+
 void n64_update_interrupts(void);
 
 void n64_set_interrupt(int flag)
@@ -185,32 +189,6 @@ void n64_clear_interrupt(int flag)
 	mi_intr_reg &= ~flag;
 	n64_update_interrupts();
 }
-
-// VR4300 core
-#define MIPS_IS_VR4300
-#define MIPSNAME vr4300
-#define MIPSXNAME(x) vr4300##x
-#define MIPS_MEM_READ n64primary_mem_read
-#define MIPS_MEM_WRITE n64primary_mem_write
-#include "mips.h"
-#undef MIPS_MEM_READ
-#undef MIPS_MEM_WRITE
-#undef MIPSNAME
-#undef MIPSXNAME
-#undef MIPS_IS_VR4300
-
-// RSP core
-#define MIPS_IS_RSP
-#define MIPSNAME rsp
-#define MIPSXNAME(x) rsp##x
-#define MIPS_MEM_READ n64rsp_mem_read
-#define MIPS_MEM_WRITE n64rsp_mem_write
-#include "mips.h"
-#undef MIPS_MEM_READ
-#undef MIPS_MEM_WRITE
-#undef MIPSNAME
-#undef MIPSXNAME
-#undef MIPS_IS_RSP
 
 void n64_update_interrupts(void)
 {
