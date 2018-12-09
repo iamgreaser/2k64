@@ -6,11 +6,11 @@ switch(vi_status_reg & 0x00000003) {
 		break;
 	case 2: // 15bpp
 #define VI_BITS 16
-#include "vi-case.h"
+#include "vi/case.h"
 		break;
 	case 3: // 32bpp
 #define VI_BITS 32
-#include "vi-case.h"
+#include "vi/case.h"
 		break;
 }
 

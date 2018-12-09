@@ -949,7 +949,7 @@ int main(int argc, char *argv[])
 		if(global_clock % (6250*262) == 6250*240) {
 			printf(" - NEW FRAME - \n");
 			SDL_LockSurface(surface);
-#include "vi-render.h"
+#include "vi/render.h"
 			SDL_UnlockSurface(surface);
 			SDL_BlitSurface(surface, NULL, window_surface, NULL);
 			SDL_UpdateWindowSurface(window);
