@@ -63,8 +63,6 @@ uint32_t dpc_current = 0;
 uint32_t dpc_status = 0;
 
 uint32_t pifimg[2*256];
-#define RAM_SIZE_WORDS (8*1024*256)
-#define RAM_SIZE_BYTES (4*RAM_SIZE_WORDS)
 #if RAM_TO_FILE
 uint32_t *ram;
 uint32_t *rsp_mem;
@@ -77,7 +75,7 @@ uint32_t pifmem[2*256];
 uint32_t cartmem[64*1024*256];
 
 // RDP
-#include "rdp.h"
+#include "rdp/rdp.h"
 
 uint32_t pi_dram_addr = 0;
 uint32_t pi_cart_addr = 0;

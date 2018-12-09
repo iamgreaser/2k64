@@ -61,3 +61,16 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #else
 #define rdp_debug_printf(...)
 #endif
+
+#define RAM_SIZE_WORDS (8*1024*256)
+#define RAM_SIZE_BYTES (4*RAM_SIZE_WORDS)
+
+#if RAM_TO_FILE
+extern uint32_t *ram;
+extern uint32_t *rsp_mem;
+extern uint32_t *pifmem;
+#else
+extern uint32_t ram[RAM_SIZE_WORDS];
+extern uint32_t rsp_mem[8*256];
+extern uint32_t pifmem[2*256];
+#endif
