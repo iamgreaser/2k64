@@ -13,6 +13,11 @@ switch(rdp_color_image_size)
 				)&0x3FF];
 
 				// FIXME use colour combiners for once
+				// ((A - B) * C) + D
+				// A: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, 1.0, Noise, 0.0, 0.0, ...
+				// B: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, Key Center, Convert K4, 0.0, 0.0, ...
+				// C: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, Key Scale, Combined Alpha, Texture 0 Alpha, Texture 1 Alpha, Primitive Alpha, Shaded Alpha, Environment Alpha, LoD Fraction, Primitive LoD Fraction, Convert K5, 0.0, 0.0, ...
+				// D: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, 1.0, 0.0
 				uint32_t *src_data = &data;
 				uint32_t *dst_data = &ram[(dram_offs+x)&(RAM_SIZE_WORDS-1)];
 				uint32_t s0 = *src_data&0x00FF00FF;

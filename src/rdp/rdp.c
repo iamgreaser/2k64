@@ -146,6 +146,30 @@ void rdp_run_one_command(void) {
 	rdp_cmd_buffer[rdp_cmd_len++] = cmd;
 	cmd = rdp_cmd_buffer[0];
 	switch(cmd>>56) {
+		case 0x08: // Non-shaded triangle
+		{
+			if(rdp_cmd_len < 4) break;
+			rdp_debug_printf("RDP %016llX Non-shaded triangle\n", cmd);
+			bool left_major = (((cmd>>55)&0x1) != 0);
+			int level = ((cmd>>51)&0x7);
+			int tile = ((cmd>>48)&0x7);
+			int16_t yl = ((int16_t)(((cmd>>32)&0x3FFF)<<2));
+			int16_t ym = ((int16_t)(((cmd>>16)&0x3FFF)<<2));
+			int16_t yh = ((int16_t)(((cmd)&0x3FFF)<<2));
+			int32_t xl = ((int32_t)(rdp_cmd_buffer[1]>>32));
+			int32_t dxldy = ((int32_t)(rdp_cmd_buffer[1]));
+			int32_t xh = ((int32_t)(rdp_cmd_buffer[2]>>32));
+			int32_t dxhdy = ((int32_t)(rdp_cmd_buffer[2]));
+			int32_t xm = ((int32_t)(rdp_cmd_buffer[3]>>32));
+			int32_t dxmdy = ((int32_t)(rdp_cmd_buffer[3]));
+
+			int32_t x0 = xh;
+			int32_t x1 = xm;
+#include "rdp/fill-tri-switch.h"
+
+			rdp_cmd_len = 0;
+		} break;
+
 		case 0x24:
 		case 0x25: {
 			if(rdp_cmd_len < 2) break;
@@ -402,6 +426,7 @@ void rdp_run_commands(void)
 		if((dpc_status & (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) == (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) {
 			dpc_current = dpc_start;
 			dpc_end_saved = dpc_end;
+			rdp_debug_printf("RDP committed %08X -> %08X\n", dpc_current, dpc_end);
 			dpc_status &= ~(RDSR_CMD_START_VALID|RDSR_CMD_END_VALID);
 
 			// Set busy
@@ -415,5 +440,10 @@ void rdp_run_commands(void)
 
 		// Run commands
 		rdp_run_one_command();
+
+		// Are we done?
+		if(dpc_current == dpc_end_saved) {
+			rdp_debug_printf("RDP done\n");
+		}
 	}
 }
