@@ -295,9 +295,6 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 			case 0x04400010: // VI_CURRENT_REG
 				// FIXME learn how this actually works
 				data_out = (global_clock / 6250) % 262;
-				if(data_out >= 240) {
-					data_out += 256-240;
-				}
 				data_out <<= 1;
 				data_out |= (global_clock / (6250*262)) & 0x1;
 				break;
