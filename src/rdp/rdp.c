@@ -171,9 +171,9 @@ void rdp_run_one_command(void) {
 			if(yh < rdp_scissor_yh<<2) { yh = rdp_scissor_yh<<2; }
 			if(ym < rdp_scissor_yh<<2) { ym = rdp_scissor_yh<<2; }
 			if(yl < rdp_scissor_yh<<2) { yl = rdp_scissor_yh<<2; }
-			if(yh > rdp_scissor_yl<<2) { yh = rdp_scissor_yl<<2; }
-			if(ym > rdp_scissor_yl<<2) { ym = rdp_scissor_yl<<2; }
-			if(yl > rdp_scissor_yl<<2) { yl = rdp_scissor_yl<<2; }
+			if(yh > (rdp_scissor_yl-4)<<2) { yh = (rdp_scissor_yl-4)<<2; }
+			if(ym > (rdp_scissor_yl-4)<<2) { ym = (rdp_scissor_yl-4)<<2; }
+			if(yl > (rdp_scissor_yl-4)<<2) { yl = (rdp_scissor_yl-4)<<2; }
 
 			int y_adjust = (yh-old_yh)>>4;
 			x0 += y_adjust*dxmdy;
@@ -213,8 +213,8 @@ void rdp_run_one_command(void) {
 
 			if(xh < rdp_scissor_xh) { xh = rdp_scissor_xh; }
 			if(yh < rdp_scissor_yh) { yh = rdp_scissor_yh; }
-			if(xl > rdp_scissor_xl) { xl = rdp_scissor_xl; }
-			if(yl > rdp_scissor_yl) { yl = rdp_scissor_yl; }
+			if(xl > rdp_scissor_xl-4) { xl = rdp_scissor_xl-4; }
+			if(yl > rdp_scissor_yl-4) { yl = rdp_scissor_yl-4; }
 
 			xh >>= 2;
 			yh >>= 2;
