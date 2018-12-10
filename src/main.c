@@ -494,8 +494,10 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		return;
 
 	} else if(addr >= 0x04100000 && addr < 0x041FFFFF) {
+#if 0
 		printf("DP write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
+#endif
 
 		switch(addr)
 		{

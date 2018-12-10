@@ -8,10 +8,10 @@ uint64_t rdp_cmd_buffer[22];
 uint64_t rdp_cmd_len = 0;
 
 // 0x2D Set Scissor
-uint32_t rdp_scissor_xh = 0;
-uint32_t rdp_scissor_yh = 0;
-uint32_t rdp_scissor_xl = 0;
-uint32_t rdp_scissor_yl = 0;
+int32_t rdp_scissor_xh = 0;
+int32_t rdp_scissor_yh = 0;
+int32_t rdp_scissor_xl = 0;
+int32_t rdp_scissor_yl = 0;
 bool rdp_scissor_f = false;
 bool rdp_scissor_o = false;
 
@@ -165,6 +165,20 @@ void rdp_run_one_command(void) {
 
 			int32_t x0 = xh;
 			int32_t x1 = xm;
+
+			int old_yh = yh;
+			int old_ym = ym;
+			if(yh < rdp_scissor_yh<<2) { yh = rdp_scissor_yh<<2; }
+			if(ym < rdp_scissor_yh<<2) { ym = rdp_scissor_yh<<2; }
+			if(yl < rdp_scissor_yh<<2) { yl = rdp_scissor_yh<<2; }
+			if(yh > rdp_scissor_yl<<2) { yh = rdp_scissor_yl<<2; }
+			if(ym > rdp_scissor_yl<<2) { ym = rdp_scissor_yl<<2; }
+			if(yl > rdp_scissor_yl<<2) { yl = rdp_scissor_yl<<2; }
+
+			int y_adjust = (yh-old_yh)>>4;
+			x0 += y_adjust*dxmdy;
+			x1 += y_adjust*dxhdy;
+
 #include "rdp/fill-tri-switch.h"
 
 			rdp_cmd_len = 0;
