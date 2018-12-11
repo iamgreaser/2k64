@@ -13,6 +13,7 @@
 		offs += ((rdp_color_image_width+1)>>OFFS_Y_SHIFT)*y; \
 		GEN_EFF_X(x_left, x_right); \
 		for(int x = eff_##x_left; x < eff_##x_right; x++) { \
+			CALC_FILL_COLOR(); \
 			WRITE_PIXEL(READ_COLOR()); \
 		} \
 	}
@@ -27,11 +28,16 @@ switch(rdp_color_image_size)
 	case 2: // 16bpp
 #define OFFS_Y_SHIFT 1
 #define WRITE_PIXEL(c) OUT_PIXEL_16 = (c);
+#ifdef IS_FILL_MODE
+#define READ_COLOR() (FILL_COLOR>>(16*(x&0x1)))
+#else
 #define READ_COLOR() (0 \
 	| (((FILL_COLOR>>11)&0x1F)<<1) \
 	| (((FILL_COLOR>>19)&0x1F)<<6) \
 	| (((FILL_COLOR>>27)&0x1F)<<11) \
 )
+#endif
+
 	if(!left_major) {
 		DRAW_FULL(x0, x1);
 	} else {

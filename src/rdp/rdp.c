@@ -200,15 +200,21 @@ void rdp_run_one_command(void) {
 			switch((rdp_other_modes & RDOM_CYCLE_TYPE_MASK))
 			{
 				case RDOM_CYCLE_TYPE_FILL: {
+#define CALC_FILL_COLOR()
+#define IS_FILL_MODE
 #define FILL_COLOR rdp_fill_color
 #include "rdp/fill-tri-switch.h"
 #undef FILL_COLOR
+#undef IS_FILL_MODE
+#undef CALC_FILL_COLOR
 				} break;
 
 				default: {
+#define CALC_FILL_COLOR()
 #define FILL_COLOR rdp_blend_color
 #include "rdp/fill-tri-switch.h"
 #undef FILL_COLOR
+#undef CALC_FILL_COLOR
 				} break;
 			}
 
