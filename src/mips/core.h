@@ -108,7 +108,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	// Set up cause fields
 	C->c0.n.cause &= 0xB000FF00;
 	C->c0.n.cause |= ((((uint32_t)(cause-1))&31)<<2);
-	if((C->c0.n.sr & C0SR_EXL) != 0) {
+	if((C->c0.n.sr & C0SR_EXL) == 0) {
 		C->c0.n.cause &= ~(1<<31);
 		if(bd) {
 			// Branch delay slots have special treatment

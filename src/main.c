@@ -73,6 +73,7 @@ uint32_t rsp_mem[8*256];
 uint32_t pifmem[2*256];
 #endif
 uint32_t cartmem[64*1024*256];
+uint32_t pifseed = 0x00000000;
 
 // RDP
 #include "rdp/rdp.h"
@@ -545,6 +546,14 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				if((data&0x0800) != 0) { mi_intr_mask |=  0x0020; }
 				n64_update_interrupts();
 				printf("INTR MASK %08X\n", mi_intr_mask);
+#if 0
+				// TODO: get RAM limit properly
+				if(pifseed == 0x3F3F) {
+					ram[0x318>>2] = 8<<20;
+				} else if(pifseed == 0x933F) {
+					ram[0x3F0>>2] = 8<<20;
+				}
+#endif
 				break;
 		}
 		return;
@@ -740,8 +749,6 @@ int main(int argc, char *argv[])
 		pifimg[i] = nv;
 	}
 	memcpy(pifmem, pifimg, sizeof(pifimg));
-
-	uint32_t pifseed = 0x00000000;
 
 	// do this before byteswapping
 	for(size_t i = 0; i < sizeof(cic_boot_codes)/sizeof(cic_boot_codes[0]); i++) {
