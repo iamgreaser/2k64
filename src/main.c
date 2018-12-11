@@ -82,6 +82,12 @@ uint32_t pifseed = 0x00000000;
 
 uint32_t ai_dram_addr = 0;
 uint32_t ai_len = 0;
+uint32_t ai_control = 0;
+uint32_t ai_dacrate = 0;
+uint32_t ai_bitrate = 0;
+bool ai_full = false;
+bool ai_busy = false;
+int32_t ai_intr_cooldown = 0;
 
 uint32_t pi_dram_addr = 0;
 uint32_t pi_cart_addr = 0;
@@ -314,6 +320,11 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 #endif
 		switch(addr)
 		{
+			case 0x0450000C: // AI_STATUS_REG
+				data_out = 0;
+				if(ai_busy) { data_out |= 0x40000000; }
+				if(ai_full) { data_out |= 0x80000001; }
+				break;
 			default:
 				data_out = 0;
 				break;
@@ -609,6 +620,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				ai_dram_addr = data & 0xFFFFFF;
 				ai_dram_addr = (ai_dram_addr+0x7)&~0x7;
 				break;
+
 			case 0x04500004: // AI_LEN
 				// "v1.0" is 15-bit, "v2.0" is 18-bit?
 				ai_len = data & 0x3FFFF;
@@ -624,6 +636,25 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 					}
 				}
 				fflush(audio_dump_fp);
+				ai_busy = true;
+				ai_full = true;
+				ai_intr_cooldown = 3*(ai_dacrate+1);
+				break;
+
+			case 0x04500008: // AI_CONTROL_REG
+				ai_control = data & 0x1;
+				break;
+
+			case 0x0450000C: // AI_STATUS_REG
+				n64_clear_interrupt(0x04);
+				break;
+
+			case 0x04500010: // AI_DACRATE_REG
+				ai_dacrate = data & 0x3FFF;
+				break;
+
+			case 0x04500014: // AI_BITRATE_REG
+				ai_bitrate = data & 0xF;
 				break;
 		}
 
@@ -954,9 +985,23 @@ int main(int argc, char *argv[])
 
 		rdp_run_commands();
 
-		global_clock += 1;
+		const int clock_tick_speed = 1;
 		// kludge for if you want a better idea of speed in practice
-		//global_clock += 5;
+		//const int clock_tick_speed = 5;
+		global_clock += clock_tick_speed;
+
+		if(ai_busy) {
+			ai_intr_cooldown -= clock_tick_speed;
+			if(ai_intr_cooldown <= 0) {
+				ai_intr_cooldown = 0;
+				ai_busy = false;
+				ai_full = false;
+				printf("AI INTR\n");
+				n64_set_interrupt(0x04);
+			}
+		}
+
+
 
 #if 0
 		// useful for brute forcing the CIC seed
