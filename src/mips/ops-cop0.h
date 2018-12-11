@@ -121,19 +121,19 @@ switch(rs) {
 
 #ifdef MIPS_IS_RSP
 		case 0: // DMA_CACHE
-			printf("DMA_CACHE %08X\n", C->regs[rt]);
+			rsp_debug_printf("DMA_CACHE %08X\n", C->regs[rt]);
 			C->c0.n.dma_cache = C->regs[rt] & 0x1FFF;
 			break;
 		case 1: // DMA_DRAM
-			printf("DMA_DRAM %08X\n", C->regs[rt]);
+			rsp_debug_printf("DMA_DRAM %08X\n", C->regs[rt]);
 			C->c0.n.dma_dram = C->regs[rt] & 0xFFFFFF;
 			break;
 		case 2: // DMA_READ_LENGTH
-			printf("DMA_READ_LENGTH %08X\n", C->regs[rt]);
+			rsp_debug_printf("DMA_READ_LENGTH %08X\n", C->regs[rt]);
 			C->c0.n.dma_read_length = C->regs[rt];
 			break;
 		case 3: // DMA_WRITE_LENGTH
-			printf("DMA_WRITE_LENGTH %08X\n", C->regs[rt]);
+			rsp_debug_printf("DMA_WRITE_LENGTH %08X\n", C->regs[rt]);
 			C->c0.n.dma_write_length = C->regs[rt];
 			break;
 

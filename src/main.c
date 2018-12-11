@@ -426,19 +426,19 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		{
 			case 0x04040000: // DMA_CACHE
 				rsp->c0.n.dma_cache = data & 0x1FFF;
-				printf("DMA_CACHE %08X\n", data);
+				rsp_debug_printf("DMA_CACHE %08X\n", data);
 				break;
 			case 0x04040004: // DMA_DRAM
 				rsp->c0.n.dma_dram = data & 0xFFFFFF;
-				printf("DMA_DRAM %08X\n", data);
+				rsp_debug_printf("DMA_DRAM %08X\n", data);
 				break;
 			case 0x04040008: // DMA_READ_LENGTH
 				rsp->c0.n.dma_read_length = data;
-				printf("DMA_READ_LENGTH %08X\n", data);
+				rsp_debug_printf("DMA_READ_LENGTH %08X\n", data);
 				break;
 			case 0x0404000C: // DMA_WRITE_LENGTH
 				rsp->c0.n.dma_write_length = data;
-				printf("DMA_WRITE_LENGTH %08X\n", data);
+				rsp_debug_printf("DMA_WRITE_LENGTH %08X\n", data);
 				break;
 			case 0x04040010:
 				if((data & 0x00000001) != 0) { rsp->c0.n.sp_status &= ~0x0001; }
@@ -615,10 +615,13 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				ai_len = (ai_len+0x7)&~0x7;
 				for(int i = 0; i < ai_len>>2; i++) {
 					uint32_t v = ram[((ai_dram_addr>>2)+i)&(RAM_SIZE_WORDS-1)];
-					fputc((v>>24)&0xFF, audio_dump_fp);
-					fputc((v>>16)&0xFF, audio_dump_fp);
-					fputc((v>>8)&0xFF, audio_dump_fp);
-					fputc((v>>0)&0xFF, audio_dump_fp);
+					//if(v != 0) {
+					if(1) {
+						fputc((v>>24)&0xFF, audio_dump_fp);
+						fputc((v>>16)&0xFF, audio_dump_fp);
+						fputc((v>>8)&0xFF, audio_dump_fp);
+						fputc((v>>0)&0xFF, audio_dump_fp);
+					}
 				}
 				fflush(audio_dump_fp);
 				break;
@@ -874,7 +877,7 @@ int main(int argc, char *argv[])
 		}
 
 		if(rsp->c0.n.dma_write_length != 0) {
-			printf("RSP DMA write RSP=%08X -> MEM=%08X len %08X\n",
+			rsp_debug_printf("RSP DMA write RSP=%08X -> MEM=%08X len %08X\n",
 				rsp->c0.n.dma_cache,
 				rsp->c0.n.dma_dram,
 				rsp->c0.n.dma_write_length);
@@ -912,7 +915,7 @@ int main(int argc, char *argv[])
 		}
 
 		if(rsp->c0.n.dma_read_length != 0) {
-			printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
+			rsp_debug_printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
 				rsp->c0.n.dma_cache,
 				rsp->c0.n.dma_dram,
 				rsp->c0.n.dma_read_length);
