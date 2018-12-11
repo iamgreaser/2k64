@@ -113,6 +113,24 @@ uint32_t rdp_fog_color = 0;
 // 0x39 Set Blend Color
 uint32_t rdp_blend_color = 0;
 
+// 0x3C Set Combine Mode
+uint32_t rdp_combine_AC0 = 0;
+uint32_t rdp_combine_CC0 = 0;
+uint32_t rdp_combine_AA0 = 0;
+uint32_t rdp_combine_CA0 = 0;
+uint32_t rdp_combine_AC1 = 0;
+uint32_t rdp_combine_CC1 = 0;
+uint32_t rdp_combine_BC0 = 0;
+uint32_t rdp_combine_BC1 = 0;
+uint32_t rdp_combine_AA1 = 0;
+uint32_t rdp_combine_CA1 = 0;
+uint32_t rdp_combine_DC0 = 0;
+uint32_t rdp_combine_BA0 = 0;
+uint32_t rdp_combine_DA0 = 0;
+uint32_t rdp_combine_DC1 = 0;
+uint32_t rdp_combine_BA1 = 0;
+uint32_t rdp_combine_DA1 = 0;
+
 // 0x3D Set Texture Image
 uint32_t rdp_texture_image_format = 0;
 uint32_t rdp_texture_image_size = 0;
@@ -390,7 +408,23 @@ void rdp_run_one_command(void) {
 
 		case 0x3C:
 			rdp_debug_printf("RDP %016llX Set Combine Mode\n", cmd);
-			rdp_debug_printf(" --- TODO! --- \n");
+			rdp_combine_AC0 = ((cmd>>52)&0x0F);
+			rdp_combine_CC0 = ((cmd>>47)&0x1F);
+			rdp_combine_AA0 = ((cmd>>44)&0x07);
+			rdp_combine_CA0 = ((cmd>>41)&0x07);
+			rdp_combine_AC1 = ((cmd>>37)&0x0F);
+			rdp_combine_CC1 = ((cmd>>32)&0x1F);
+			rdp_combine_BC0 = ((cmd>>28)&0x0F);
+			rdp_combine_BC1 = ((cmd>>24)&0x0F);
+			rdp_combine_AA1 = ((cmd>>21)&0x07);
+			rdp_combine_CA1 = ((cmd>>18)&0x07);
+			rdp_combine_DC0 = ((cmd>>15)&0x07);
+			rdp_combine_BA0 = ((cmd>>12)&0x07);
+			rdp_combine_DA0 = ((cmd>>9)&0x07);
+			rdp_combine_DC1 = ((cmd>>6)&0x07);
+			rdp_combine_BA1 = ((cmd>>3)&0x07);
+			rdp_combine_DA1 = ((cmd>>0)&0x07);
+
 			rdp_cmd_len = 0;
 			break;
 
