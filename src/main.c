@@ -95,6 +95,8 @@ uint32_t pi_rd_len = 0;
 uint32_t pi_wr_len = 0;
 uint32_t pi_status = 0;
 
+uint32_t si_dram_addr = 0;
+
 uint32_t vi_status_reg = 0;
 uint32_t vi_origin_reg = 0;
 uint32_t vi_width_reg = 640;
@@ -728,6 +730,44 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		printf("SI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
+		switch(addr)
+		{
+			case 0x04800000: // SI_DRAM_ADDR_REG
+				si_dram_addr = data & 0xFFFFFF;
+				break;
+
+			case 0x04800010: // SI_PIF_ADDR_RD64B_REG
+				if(si_dram_addr+64 <= RAM_SIZE_BYTES) {
+					// FIXME: this should run separately
+					for(int i = 0; i < 64; i += 4) {
+						uint32_t mdata = ram[(si_dram_addr+i)>>2];
+						n64primary_mem_write(C, 0x1FC007C0+i, 0xFFFFFFFF, mdata);
+					}
+					printf("SI INTR\n");
+					n64_set_interrupt(0x02);
+				}
+				break;
+
+			case 0x04800004: // SI_PIF_ADDR_WR64B_REG
+				if(si_dram_addr+64 <= RAM_SIZE_BYTES) {
+					// FIXME: this should run separately
+					for(int i = 0; i < 64; i += 4) {
+						uint32_t mdata = 0xFFFFFFFF;
+						n64primary_mem_read(C, 0x1FC007C0+i, 0xFFFFFFFF, &mdata);
+						ram[(si_dram_addr+i)>>2] = mdata;
+					}
+					printf("SI INTR\n");
+					n64_set_interrupt(0x02);
+				}
+				break;
+
+			case 0x04800018: // SI_STATUS_REG
+				n64_clear_interrupt(0x02);
+				break;
+
+			default:
+				break;
+		}
 		return;
 
 	} else if(addr >= 0x1FC007C0U && addr < 0x1FC00000U+4*2*256) {
@@ -739,6 +779,18 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 			// HACK.
 			switch(data&mask&0xFF)
 			{
+				case 0x01:
+					printf("CONTROLLER READ\n");
+					for(int i = 0; i < 4; i++) {
+						pifmem[0+2*i] &= ~0x0000FF00;
+						pifmem[0+2*i] |=  0x00000000;
+						pifmem[1+2*i]  =  0x00000000;
+					}
+					pifmem[2*4] &= ~0xFF000000;
+					pifmem[2*4] |=  0xFE000000;
+					pifmem[0x3F] &= ~0x000000FF;
+					pifmem[0x3F] |=  0x00000000;
+					break;
 				case 0x30:
 					data_in |= 0x00000080;
 					break;

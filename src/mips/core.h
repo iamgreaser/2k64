@@ -39,7 +39,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 #ifdef MIPS_IS_RSP
 	bool show_throws = true;
 #else
-	bool show_throws = true;
+	bool show_throws = (cause != MER_Int);
 #endif
 
 	if(show_throws) {
