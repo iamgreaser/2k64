@@ -54,6 +54,13 @@ switch(op>>26U) {
 #ifdef MIPS_IS_RSP
 			C->c0.n.sp_status |= 0x02; // broke
 			C->c0.n.sp_status |= 0x01; // halt
+
+			// Interrupt on break?
+			if((C->c0.n.sp_status & 0x40) != 0) {
+				rsp_debug_printf("RSP INTR ON BREAK\n");
+				C->rsp_intr = true;
+				n64_set_interrupt(0x01);
+			}
 			return MER_Bp;
 #else
 			MIPSXNAME(_throw_exception)(C, op_pc, MER_Bp, op_was_branch);

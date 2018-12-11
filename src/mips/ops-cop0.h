@@ -162,6 +162,11 @@ switch(rs) {
 			if((data & 0x00100000) != 0) { C->c0.n.sp_status |=  0x1000; }
 			if((data & 0x00200000) != 0) { C->c0.n.sp_status &= ~0x2000; }
 			if((data & 0x00400000) != 0) { C->c0.n.sp_status |=  0x2000; }
+			if(C->rsp_intr) {
+				n64_set_interrupt(0x01);
+			} else {
+				n64_clear_interrupt(0x01);
+			}
 		} break;
 
 		case 7: // SP_RESERVED

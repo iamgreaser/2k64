@@ -4,6 +4,7 @@
 
 # program output
 ram.data
+audio_dump.bin
 
 # ROMs
 pifdata.bin

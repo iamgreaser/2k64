@@ -5,6 +5,8 @@ SDL_Surface *window_surface;
 SDL_Surface *surface;
 SDL_Renderer *renderer;
 
+FILE *audio_dump_fp;
+
 uint32_t fullrandu32(void)
 {
 	// I do NOT care about Windows for this
@@ -78,6 +80,9 @@ uint32_t pifseed = 0x00000000;
 // RDP
 #include "rdp/rdp.h"
 
+uint32_t ai_dram_addr = 0;
+uint32_t ai_len = 0;
+
 uint32_t pi_dram_addr = 0;
 uint32_t pi_cart_addr = 0;
 uint32_t pi_rd_len = 0;
@@ -99,8 +104,6 @@ uint64_t global_clock = 0;
 // MIPS CPUs
 #include "vr4300.h"
 #include "rsp.h"
-
-void n64_update_interrupts(void);
 
 void n64_set_interrupt(int flag)
 {
@@ -461,6 +464,11 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				if((data & 0x00100000) != 0) { rsp->c0.n.sp_status |=  0x1000; }
 				if((data & 0x00200000) != 0) { rsp->c0.n.sp_status &= ~0x2000; }
 				if((data & 0x00400000) != 0) { rsp->c0.n.sp_status |=  0x2000; }
+				if(rsp->rsp_intr) {
+					n64_set_interrupt(0x01);
+				} else {
+					n64_clear_interrupt(0x01);
+				}
 				break;
 
 			case 0x0404001C:
@@ -595,6 +603,27 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		printf("AI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
+		switch(addr)
+		{
+			case 0x04500000: // AI_DRAM_ADDR_REG
+				ai_dram_addr = data & 0xFFFFFF;
+				ai_dram_addr = (ai_dram_addr+0x7)&~0x7;
+				break;
+			case 0x04500004: // AI_LEN
+				// "v1.0" is 15-bit, "v2.0" is 18-bit?
+				ai_len = data & 0x3FFFF;
+				ai_len = (ai_len+0x7)&~0x7;
+				for(int i = 0; i < ai_len>>2; i++) {
+					uint32_t v = ram[((ai_dram_addr>>2)+i)&(RAM_SIZE_WORDS-1)];
+					fputc((v>>24)&0xFF, audio_dump_fp);
+					fputc((v>>16)&0xFF, audio_dump_fp);
+					fputc((v>>8)&0xFF, audio_dump_fp);
+					fputc((v>>0)&0xFF, audio_dump_fp);
+				}
+				fflush(audio_dump_fp);
+				break;
+		}
+
 		return;
 
 	} else if(addr >= 0x04600000 && addr < 0x046FFFFF) {
@@ -712,6 +741,8 @@ int main(int argc, char *argv[])
 	FILE *fp;
 	struct vr4300 *C = &vr4300_baseinst;
 	struct rsp *rsp = &rsp_baseinst;
+
+	audio_dump_fp = fopen("audio_dump.bin", "wb");
 
 	srand((unsigned int)time(NULL));
 

@@ -36,6 +36,10 @@ uint64_t fullrandu64(void);
 float n64_roundf(float v);
 double n64_round(double v);
 
+void n64_update_interrupts(void);
+void n64_set_interrupt(int flag);
+void n64_clear_interrupt(int flag);
+
 enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t *data);
 void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32_t data);
 enum mipserr n64rsp_mem_read(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t *data);
@@ -50,7 +54,7 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #define DEBUG_SP 1
 #define DEBUG_VI 1
 
-#if 0
+#if 1
 #define rsp_debug_printf printf
 #else
 #define rsp_debug_printf(...)
