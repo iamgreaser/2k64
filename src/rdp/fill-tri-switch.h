@@ -7,12 +7,6 @@
 #define OUT_PIXEL_16 ((uint16_t *)&ram[offs&(RAM_SIZE_WORDS-1)])[x^0x1]
 #define OUT_PIXEL_32 ram[(offs+x)&(RAM_SIZE_WORDS-1)]
 
-#if 0
-#define FILL_COLOR rdp_fill_color
-#else
-#define FILL_COLOR rdp_blend_color
-#endif
-
 #define DRAW_HALF(y_top, y_bottom, dx0, x_left, x_right) \
 	for(int y = y_top>>4; y < y_bottom>>4; y++, x0 += dx0, x1 += dxhdy) { \
 		uint32_t offs = (rdp_color_image_addr>>2); \
