@@ -900,6 +900,31 @@ switch(op>>26U) {
 		uint32_t v_offset = (uint32_t)(((int32_t)(op<<25))>>25);
 		switch(v_opcode)
 		{
+			// SSV
+			case 1: {
+				rsp_debug_printf("SSV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert((v_element&0x1) == 0);
+				MIPSXNAME(_write16)(C,
+					C->regs[v_base]
+					+(v_offset<<1),
+					C->c2.h[v_vt][((v_element>>1)&0x7)]
+				);
+			} break;
+
+			// SDV
+			case 3: {
+				rsp_debug_printf("SDV %2u %2u %2u %2u %d\n", v_base, v_vt, v_opcode, v_element, v_offset);
+				assert((v_element&0x7) == 0);
+				for(int i = 0; i < 4; i++) {
+					MIPSXNAME(_write16)(C,
+						C->regs[v_base]
+						+(i<<1)
+						+(v_offset<<3),
+						C->c2.h[v_vt][((i+(v_element>>1))&0x7)]
+					);
+				}
+			} break;
+
 			// SQV
 			case 4: {
 				// FIXME this is wrong
