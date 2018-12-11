@@ -384,28 +384,46 @@ void rdp_run_one_command(void) {
 			rdp_cmd_len = 0;
 			break;
 
-		case 0x36:
+		case 0x36: {
 			rdp_debug_printf("RDP %016llX Fill Rectangle\n", cmd);
+			int32_t yl = (cmd>>0)&0xFFF;
+			int32_t xl = (cmd>>12)&0xFFF;
+			int32_t yh = (cmd>>32)&0xFFF;
+			int32_t xh = (cmd>>44)&0xFFF;
+
+			if(xh < rdp_scissor_xh) { xh = rdp_scissor_xh; }
+			if(yh < rdp_scissor_yh) { yh = rdp_scissor_yh; }
+			if(xl > rdp_scissor_xl) { xl = rdp_scissor_xl; }
+			if(yl > rdp_scissor_yl) { yl = rdp_scissor_yl; }
+
+			xh >>= 2;
+			yh >>= 2;
+			xl >>= 2;
+			yl >>= 2;
+			rdp_debug_printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
+			switch((rdp_other_modes & RDOM_CYCLE_TYPE_MASK))
 			{
-				int32_t yl = (cmd>>0)&0xFFF;
-				int32_t xl = (cmd>>12)&0xFFF;
-				int32_t yh = (cmd>>32)&0xFFF;
-				int32_t xh = (cmd>>44)&0xFFF;
-
-				if(xh < rdp_scissor_xh) { xh = rdp_scissor_xh; }
-				if(yh < rdp_scissor_yh) { yh = rdp_scissor_yh; }
-				if(xl > rdp_scissor_xl) { xl = rdp_scissor_xl; }
-				if(yl > rdp_scissor_yl) { yl = rdp_scissor_yl; }
-
-				xh >>= 2;
-				yh >>= 2;
-				xl >>= 2;
-				yl >>= 2;
-				rdp_debug_printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
+				case RDOM_CYCLE_TYPE_FILL: {
+#define CALC_FILL_COLOR()
+#define IS_FILL_MODE
+#define FILL_COLOR rdp_fill_color
 #include "rdp/fill-rect-switch.h"
+#undef FILL_COLOR
+#undef IS_FILL_MODE
+#undef CALC_FILL_COLOR
+				} break;
+
+				default: {
+#define CALC_FILL_COLOR()
+#define FILL_COLOR rdp_blend_color
+#include "rdp/fill-rect-switch.h"
+#undef FILL_COLOR
+#undef CALC_FILL_COLOR
+				} break;
 			}
+
 			rdp_cmd_len = 0;
-			break;
+		} break;
 
 		case 0x37:
 			rdp_debug_printf("RDP %016llX Set Fill Color\n", cmd);

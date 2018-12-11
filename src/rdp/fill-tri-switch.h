@@ -37,7 +37,6 @@ switch(rdp_color_image_size)
 	| (((FILL_COLOR>>27)&0x1F)<<11) \
 )
 #endif
-
 	if(!left_major) {
 		DRAW_FULL(x0, x1);
 	} else {
