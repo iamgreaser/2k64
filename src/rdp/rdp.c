@@ -7,6 +7,10 @@ uint32_t rdp_tmem[0x400];
 uint64_t rdp_cmd_buffer[22];
 uint64_t rdp_cmd_len = 0;
 
+// NOTE: not actually accurate right now
+// (fills should be faster)
+uint32_t rdp_cooldown = 0;
+
 // 0x2D Set Scissor
 int32_t rdp_scissor_xh = 0;
 int32_t rdp_scissor_yh = 0;
@@ -505,13 +509,32 @@ void rdp_run_one_command(void) {
 
 void rdp_run_commands(void)
 {
-	// Do we have commands to run?
-	if(dpc_current == dpc_end_saved) {
-		// Clear busy
-		dpc_status &= ~RDSR_CMD_BUSY;
-		dpc_status &= ~RDSR_DMA_BUSY;
-		dpc_status |= RDSR_CMD_READY;
+	if(rdp_cooldown > 0) {
+		rdp_cooldown -= 1;
+		return;
+	}
 
+	// Do we have commands to run?
+	if((dpc_status & RDSR_CMD_BUSY) != 0) {
+		if(dpc_current == dpc_end_saved) {
+			rdp_debug_printf("RDP done\n");
+
+			// Clear busy
+			dpc_status &= ~RDSR_CMD_BUSY;
+			dpc_status &= ~RDSR_DMA_BUSY;
+			dpc_status |= RDSR_CMD_READY;
+
+			// Was start set?
+			if((dpc_status & RDSR_CMD_START_VALID) == 0) {
+				// No, so take the new start.
+				dpc_status |= RDSR_CMD_START_VALID;
+				dpc_start = dpc_end_saved;
+			}
+		} else {
+			// Run commands
+			rdp_run_one_command();
+		}
+	} else {
 		// Are start and end valid?
 		if((dpc_status & (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) == (RDSR_CMD_START_VALID|RDSR_CMD_END_VALID)) {
 			dpc_current = dpc_start;
@@ -520,20 +543,13 @@ void rdp_run_commands(void)
 			dpc_status &= ~(RDSR_CMD_START_VALID|RDSR_CMD_END_VALID);
 
 			// Set busy
-			dpc_status |= (1<<8);
-		}
-	} else {
-		// Set busy
-		dpc_status |= RDSR_CMD_BUSY;
-		dpc_status |= RDSR_DMA_BUSY;
-		dpc_status &= ~RDSR_CMD_READY;
+			dpc_status |= RDSR_CMD_BUSY;
+			dpc_status |= RDSR_DMA_BUSY;
+			dpc_status &= ~RDSR_CMD_READY;
 
-		// Run commands
-		rdp_run_one_command();
-
-		// Are we done?
-		if(dpc_current == dpc_end_saved) {
-			rdp_debug_printf("RDP done\n");
+			// Clear valid flags
+			dpc_status &= ~RDSR_CMD_START_VALID;
+			dpc_status &= ~RDSR_CMD_END_VALID;
 		}
 	}
 }

@@ -1,9 +1,3 @@
-switch(rdp_color_image_size)
-{
-	case 3: // 32bpp
-		break;
-}
-
 #define DRAW_FULL() \
 	for(int y = yl; y < yh; y++, acc_t += dtdy) { \
 		int16_t acc_s = s; \
@@ -12,6 +6,7 @@ switch(rdp_color_image_size)
 		dram_offs += (dram_stride>>OFFS_Y_SHIFT)*y; \
 		tmem_offs += tmem_stride*((acc_t>>rdp_tile_shift_t)&rdp_tile_mask_t); \
 		for(int x = xl; x < xh; x++, acc_s += dsdx) { \
+			rdp_cooldown += 1; \
 			uint32_t data = rdp_tmem[(tmem_offs \
 				+((acc_s>>rdp_tile_shift_s)&rdp_tile_mask_s) \
 			)&0x3FF]; \

@@ -3,6 +3,7 @@
 		uint32_t offs = (rdp_color_image_addr>>2); \
 		offs += ((rdp_color_image_width+1)>>OFFS_Y_SHIFT)*y; \
 		for(int x = xl; x < xh; x++) { \
+			rdp_cooldown += 1; \
 			CALC_FILL_COLOR(); \
 			WRITE_PIXEL(READ_COLOR()); \
 		} \

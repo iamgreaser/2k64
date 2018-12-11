@@ -13,6 +13,7 @@
 		offs += ((rdp_color_image_width+1)>>OFFS_Y_SHIFT)*y; \
 		GEN_EFF_X(x_left, x_right); \
 		for(int x = eff_##x_left; x < eff_##x_right; x++) { \
+			rdp_cooldown += 1; \
 			CALC_FILL_COLOR(); \
 			WRITE_PIXEL(READ_COLOR()); \
 		} \
