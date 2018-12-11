@@ -231,6 +231,7 @@ switch(rs) {
 			break;
 
 		case 11: // c0_compare
+			printf("COMPARE %08X -> %08X\n", C->c0.n.compare, C->regs[rt]);
 			C->c0.n.compare = (SREG)(int32_t)C->regs[rt];
 			C->c0.n.cause &= ~0x8000;
 			break;

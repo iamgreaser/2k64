@@ -579,7 +579,8 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 #ifndef MIPS_IS_RSP
 	C->c0.n.count += 1;
-	if((C->c0.n.count&0x1FFFFFFE) == ((C->c0.n.compare & 0xFFFFFFFF)<<1)) {
+	if((C->c0.n.count&0x1FFFFFFF) == ((C->c0.n.compare & 0xFFFFFFFF)<<1)) {
+		//printf("COUNT INTERRUPT\n");
 		C->c0.n.cause |= 0x8000;
 	}
 #endif
