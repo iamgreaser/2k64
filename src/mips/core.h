@@ -386,8 +386,13 @@ enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 {
 	// Get address
 	if((addr&3) != 0) {
+		printf("BAD ADDR read 32-bit %08X\n", addr);
+#ifdef MIPS_IS_RSP
+		addr &= ~0x3;
+#else
 		MIPSXNAME(_badvaddr_cond_set)(C, MER_AdEL, addr);
 		return MER_AdEL;
+#endif
 	}
 
 	enum mipserr e = MIPSXNAME(_calc_addr)(C, &addr, false);
@@ -406,8 +411,13 @@ enum mipserr MIPSXNAME(_read16)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 {
 	// Get address
 	if((addr&1) != 0) {
+		printf("BAD ADDR read 16-bit %08X\n", addr);
+#ifdef MIPS_IS_RSP
+		addr &= ~0x1;
+#else
 		MIPSXNAME(_badvaddr_cond_set)(C, MER_AdEL, addr);
 		return MER_AdEL;
+#endif
 	}
 
 	enum mipserr e = MIPSXNAME(_calc_addr)(C, &addr, false);
@@ -475,8 +485,13 @@ enum mipserr MIPSXNAME(_write32)(struct MIPSNAME *C, UREG addr, uint32_t data)
 {
 	// Get address
 	if((addr&3) != 0) {
+		printf("BAD ADDR write 32-bit %08X\n", addr);
+#ifdef MIPS_IS_RSP
+		addr &= ~3;
+#else
 		MIPSXNAME(_badvaddr_cond_set)(C, MER_AdES, addr);
 		return MER_AdES;
+#endif
 	}
 
 	enum mipserr e = MIPSXNAME(_calc_addr)(C, &addr, false);
@@ -495,8 +510,13 @@ enum mipserr MIPSXNAME(_write16)(struct MIPSNAME *C, UREG addr, uint32_t data)
 {
 	// Get address
 	if((addr&1) != 0) {
+		printf("BAD ADDR write 16-bit %08X\n", addr);
+#ifdef MIPS_IS_RSP
+		addr &= ~1;
+#else
 		MIPSXNAME(_badvaddr_cond_set)(C, MER_AdES, addr);
 		return MER_AdES;
+#endif
 	}
 
 	enum mipserr e = MIPSXNAME(_calc_addr)(C, &addr, false);
