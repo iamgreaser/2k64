@@ -1,5 +1,9 @@
 #include "common.h"
 
+#if RAM_TO_FILE
+int ram_fd = -1;
+#endif
+
 SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Surface *surface;
@@ -107,6 +111,8 @@ uint32_t vi_y_scale_reg = 0;
 uint32_t mi_intr_reg = 0;
 uint32_t mi_intr_mask = 0;
 
+uint32_t rdreg_mode = 0;
+
 uint64_t global_clock = 0;
 
 // MIPS CPUs
@@ -186,16 +192,24 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		}
 
 	} else if(addr >= 0x03F00000 && addr < 0x03FFFFFF) {
+#ifdef DEBUG_RDREG
 		printf("RDREG read %016llX mask %08X\n",
 			(unsigned long long)addr, mask);
+#endif
+
 		switch(addr)
 		{
 			case 0x03F00000: // DEVICE_TYPE
 				data_out = 0xB4190010;
+				//data_out = 0xB0190000;
 				break;
 
 			case 0x03F00008: // DELAY
 				data_out = 0x2B3B1A0B;
+				break;
+
+			case 0x03F0000C: // MODE
+				data_out = rdreg_mode;
 				break;
 
 			case 0x03F00018: // RAS_INTERVAL
@@ -282,6 +296,10 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 #endif
 		switch(addr)
 		{
+			case 0x04300004: // MI_VERSION_REG
+				data_out = 0x01010101;
+				break;
+
 			case 0x04300008: // MI_INTR_REG
 				data_out = mi_intr_reg;
 				break;
@@ -397,20 +415,25 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	uint32_t data_in = data & mask;
 	uint32_t *data_out_ptr = NULL;
 
-	if(addr == 0x00000318) {
-		//if(C->pl0_pc != 0xFFFFFFFFA4000538ULL)
-		{
-		// FIXME: DETECT EXPANSION PAK PROPERLY
-		//data = 8*1024*1024;
-		//printf("DEBUG ABORT: %08X (%016llX)\n", data, C->pl0_pc);
-		//fsync(ram_fd);
-		//abort();
-		}
-	}
-
 	if(addr < RAM_SIZE_BYTES) {
 		//data_out_ptr = &ram[(addr & (RAM_SIZE_BYTES-1))>>2];
 		data_out_ptr = &ram[addr>>2];
+
+		//if(addr == 0x000003F0) {
+		//if(addr == 0x00000318) {
+		if(addr == (pifseed == 0x0000913F ? 0x000003F0 : 0x00000318)) {
+			if(C->pl0_pc != 0xFFFFFFFFA4000538ULL) {
+				if(C->pl0_pc >= 0xFFFFFFFFA4000000ULL)
+				{
+				// FIXME: DETECT EXPANSION PAK PROPERLY
+				//printf("DEBUG ABORT: %08X (%016llX)\n", data, C->pl0_pc);
+				data = 8*1024*1024;
+				//fsync(ram_fd);
+				//abort();
+				}
+			}
+		}
+
 
 	} else if(addr <= 0x03EFFFFFU) {
 		return;
@@ -420,6 +443,14 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		printf("RDREG write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
+
+		switch(addr)
+		{
+			case 0x03F0000C: // MODE
+				rdreg_mode = data;
+				break;
+		}
+
 		return;
 
 	} else if(addr >= 0x04000000 && addr < 0x04001FFF) {
@@ -566,7 +597,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				if((data&0x0400) != 0) { mi_intr_mask &= ~0x0020; }
 				if((data&0x0800) != 0) { mi_intr_mask |=  0x0020; }
 				n64_update_interrupts();
-				printf("INTR MASK %08X\n", mi_intr_mask);
+				//printf("INTR MASK %08X\n", mi_intr_mask);
 #if 0
 				// TODO: get RAM limit properly
 				if(pifseed == 0x3F3F) {
@@ -581,6 +612,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 	} else if(addr >= 0x04400000 && addr < 0x044FFFFF) {
 #if DEBUG_VI
+		printf("pl0 PC = %016llX\n", C->pl0_pc);
 		printf("VI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
@@ -638,9 +670,11 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 					}
 				}
 				fflush(audio_dump_fp);
+				assert(!ai_busy);
 				ai_busy = true;
 				ai_full = true;
-				ai_intr_cooldown = 3*(ai_dacrate+1);
+				ai_intr_cooldown = 2*(ai_dacrate+1)*ai_len*8/((ai_bitrate+1)*2);
+				printf("cooldown %d %d %d %d\n", ai_intr_cooldown, ai_len, ai_dacrate, ai_bitrate);
 				break;
 
 			case 0x04500008: // AI_CONTROL_REG

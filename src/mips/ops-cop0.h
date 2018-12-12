@@ -357,7 +357,7 @@ switch(rs) {
 
 		case 24: // ERET
 		{
-			printf("ERET start (SR=%08X PC=%016llX)\n", C->c0.n.sr, C->pc);
+			//printf("ERET start (SR=%08X PC=%016llX)\n", C->c0.n.sr, C->pc);
 			if((C->c0.n.sr & C0SR_ERL) != 0) {
 				C->pc = C->c0.n.errorepc;
 				C->c0.n.sr &= ~C0SR_ERL;
@@ -365,7 +365,7 @@ switch(rs) {
 				C->pc = C->c0.n.epc;
 				C->c0.n.sr &= ~C0SR_EXL;
 			}
-			printf("ERET (SR=%08X PC=%016llX SP=%016llX)\n", C->c0.n.sr, C->pc, C->regs[29]);
+			//printf("ERET (SR=%08X PC=%016llX SP=%016llX)\n", C->c0.n.sr, C->pc, C->regs[29]);
 
 			C->llbit = false;
 

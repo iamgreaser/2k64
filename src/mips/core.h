@@ -649,11 +649,12 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 #if 0
 	//if(new_pc == op_pc - 4) {
-	if(new_op == 0x0411FFFF) {
+	//if(new_op == 0x0411FFFF) {
+	if(op_pc >= 0x70049950 && op_pc <= 0x70049970) {
 	//if(new_pc == (SREG)(int32_t)0xA40015F8) {
-		MIPSXNAME(_throw_exception)(C, op_pc, MER_Int, op_was_branch);
+		//MIPSXNAME(_throw_exception)(C, op_pc, MER_Int, op_was_branch);
 		printf("OP OLD: %016llX: %08X\n", op_pc, op);
-		printf("OP NEW: %016llX: %08X\n", new_pc, new_op);
+		//printf("OP NEW: %016llX: %08X\n", new_pc, new_op);
 	}
 #endif
 

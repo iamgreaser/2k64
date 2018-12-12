@@ -799,7 +799,7 @@ switch(op>>26U) {
 	case 47: // CACHE
 		// TODO!
 		if(rt != 0 && rt != 1 && rt != 8 && rt != 9) {
-			printf("CACHE %2u %08X\n", rt, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op);
+			//printf("CACHE %2u %08X\n", rt, C->regs[rs]+(uint32_t)(int32_t)(int16_t)op);
 		}
 		break;
 
