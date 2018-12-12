@@ -398,7 +398,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	uint32_t *data_out_ptr = NULL;
 
 	if(addr == 0x00000318) {
-		//if(C->pl0_pc != 0xFFFFFFFFA400039CULL) {
+		//if(C->pl0_pc != 0xFFFFFFFFA4000538ULL)
 		{
 		// FIXME: DETECT EXPANSION PAK PROPERLY
 		//data = 8*1024*1024;
@@ -571,7 +571,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				// TODO: get RAM limit properly
 				if(pifseed == 0x3F3F) {
 					ram[0x318>>2] = 8<<20;
-				} else if(pifseed == 0x933F) {
+				} else if(pifseed == 0x913F) {
 					ram[0x3F0>>2] = 8<<20;
 				}
 #endif
@@ -784,12 +784,12 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 					for(int i = 0; i < 4; i++) {
 						pifmem[0+2*i] &= ~0x0000FF00;
 						pifmem[0+2*i] |=  0x00000000;
-						pifmem[1+2*i]  =  0x00000000;
+						pifmem[1+2*i]  =  0xFFFF0000;
 					}
 					pifmem[2*4] &= ~0xFF000000;
 					pifmem[2*4] |=  0xFE000000;
 					pifmem[0x3F] &= ~0x000000FF;
-					pifmem[0x3F] |=  0x00000000;
+					pifmem[0x3F] |=  0x00000080;
 					break;
 				case 0x30:
 					data_in |= 0x00000080;
