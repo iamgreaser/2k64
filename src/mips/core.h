@@ -386,7 +386,7 @@ enum mipserr MIPSXNAME(_read32)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 {
 	// Get address
 	if((addr&3) != 0) {
-		printf("BAD ADDR read 32-bit %08X\n", addr);
+		printf("BAD ADDR read 32-bit %08X @ %016llX\n", addr, C->pl0_pc);
 #ifdef MIPS_IS_RSP
 		addr &= ~0x3;
 #else
@@ -411,7 +411,8 @@ enum mipserr MIPSXNAME(_read16)(struct MIPSNAME *C, UREG addr, uint32_t *data)
 {
 	// Get address
 	if((addr&1) != 0) {
-		printf("BAD ADDR read 16-bit %08X\n", addr);
+		printf("BAD ADDR read 16-bit %08X @ %016llX\n", addr, C->pl0_pc);
+		printf("k1=%016llX\n", C->regs[27]);
 #ifdef MIPS_IS_RSP
 		addr &= ~0x1;
 #else
@@ -485,7 +486,7 @@ enum mipserr MIPSXNAME(_write32)(struct MIPSNAME *C, UREG addr, uint32_t data)
 {
 	// Get address
 	if((addr&3) != 0) {
-		printf("BAD ADDR write 32-bit %08X\n", addr);
+		printf("BAD ADDR write 32-bit %08X @ %016llX\n", addr, C->pl0_pc);
 #ifdef MIPS_IS_RSP
 		addr &= ~3;
 #else
@@ -510,7 +511,7 @@ enum mipserr MIPSXNAME(_write16)(struct MIPSNAME *C, UREG addr, uint32_t data)
 {
 	// Get address
 	if((addr&1) != 0) {
-		printf("BAD ADDR write 16-bit %08X\n", addr);
+		printf("BAD ADDR write 16-bit %08X @ %016llX\n", addr, C->pl0_pc);
 #ifdef MIPS_IS_RSP
 		addr &= ~1;
 #else
@@ -600,7 +601,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 #ifndef MIPS_IS_RSP
 	C->c0.n.count += 1;
 	if((C->c0.n.count&0x1FFFFFFF) == ((C->c0.n.compare & 0xFFFFFFFF)<<1)) {
-		//printf("COUNT INTERRUPT\n");
+		printf("COUNT INTR\n");
 		C->c0.n.cause |= 0x8000;
 	}
 #endif

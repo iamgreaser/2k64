@@ -1,19 +1,22 @@
 // TODO: set cause and throw exception!
 #define TRAP_ON_NAN_FS_FT_S { \
-	if(isnan(C->c1.sf[fs][0]) || isnan(C->c1.sf[ft][0])) { \
+	if(isnan(REG_SF(fs)) || isnan(REG_SF(ft))) { \
 		printf("TODO: TRAP ON NaN\n"); \
 		fflush(stdout); \
-		abort(); \
+		if(0) abort(); \
 	} \
 }
 
 #define TRAP_ON_NAN_FS_FT_D { \
-	if(isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) { \
+	if(isnan(REG_DF(fs)) || isnan(REG_DF(ft))) { \
 		printf("TODO: TRAP ON NaN\n"); \
 		fflush(stdout); \
-		abort(); \
+		if(0) abort(); \
 	} \
 }
+
+#define REG_SF(r) C->c1.sf[(r)&~0x1][(r)&0x1]
+#define REG_DF(r) C->c1.df[(r)]
 
 {
 	uint32_t fd = (op>>6)&0x1F;
@@ -83,78 +86,78 @@
 		// S instructions
 		case 16: switch(op&0x3F) {
 			case 0: // ADD.S
-				C->c1.sf[fd][0] = C->c1.sf[fs][0] + C->c1.sf[ft][0];
+				REG_SF(fd) = REG_SF(fs) + REG_SF(ft);
 				break;
 
 			case 1: // SUB.S
-				C->c1.sf[fd][0] = C->c1.sf[fs][0] - C->c1.sf[ft][0];
+				REG_SF(fd) = REG_SF(fs) - REG_SF(ft);
 				break;
 
 			case 2: // MUL.S
-				C->c1.sf[fd][0] = C->c1.sf[fs][0] * C->c1.sf[ft][0];
+				REG_SF(fd) = REG_SF(fs) * REG_SF(ft);
 				break;
 
 			case 3: // DIV.S
-				C->c1.sf[fd][0] = C->c1.sf[fs][0] / C->c1.sf[ft][0];
+				REG_SF(fd) = REG_SF(fs) / REG_SF(ft);
 				break;
 
 			case 4: // SQRT.S
-				C->c1.sf[fd][0] = sqrtf(C->c1.sf[fs][0]);
+				REG_SF(fd) = sqrtf(REG_SF(fs));
 				break;
 
 			case 5: // ABS.S
-				C->c1.sf[fd][0] = fabsf(C->c1.sf[fs][0]);
+				REG_SF(fd) = fabsf(REG_SF(fs));
 				break;
 
 			case 6: // MOV.S
-				C->c1.sf[fd][0] = C->c1.sf[fs][0];
+				REG_SF(fd) = REG_SF(fs);
 				break;
 
 			case 7: // NEG.S
-				C->c1.sf[fd][0] = -C->c1.sf[fs][0];
+				REG_SF(fd) = -REG_SF(fs);
 				break;
 
 			case 8: // ROUND.L.S
-				C->c1.di[fd] = n64_roundf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = n64_roundf(REG_SF(fs));
 				break;
 
 			case 9: // TRUNC.L.S
-				C->c1.di[fd] = truncf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = truncf(REG_SF(fs));
 				break;
 
 			case 10: // CEIL.L.S
-				C->c1.di[fd] = ceilf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = ceilf(REG_SF(fs));
 				break;
 
 			case 11: // FLOOR.L.S
-				C->c1.di[fd] = floorf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = floorf(REG_SF(fs));
 				break;
 
 			case 12: // ROUND.W.S
-				C->c1.di[fd] = n64_roundf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = n64_roundf(REG_SF(fs));
 				break;
 
 			case 13: // TRUNC.W.S
-				C->c1.di[fd] = truncf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = truncf(REG_SF(fs));
 				break;
 
 			case 14: // CEIL.W.S
-				C->c1.di[fd] = ceilf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = ceilf(REG_SF(fs));
 				break;
 
 			case 15: // FLOOR.W.S
-				C->c1.di[fd] = floorf(C->c1.sf[fs][0]);
+				C->c1.di[fd] = floorf(REG_SF(fs));
 				break;
 
 			case 33: // CVT.D.S
-				C->c1.df[fd] = C->c1.sf[fs][0];
+				REG_DF(fd) = REG_SF(fs);
 				break;
 
 			case 36: // CVT.W.S
-				C->c1.di[fd] = (SREG)(int32_t)C->c1.sf[fs][0];
+				C->c1.di[fd] = (SREG)(int32_t)REG_SF(fs);
 				break;
 			case 37: // CVT.L.S
-				C->c1.di[fd] = C->c1.sf[fs][0];
+				C->c1.di[fd] = REG_SF(fs);
 				break;
 
 			case 56: // C.SF.S
@@ -165,37 +168,37 @@
 			case 57: // C.NGLE.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 49: // C.UN.S
-				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0]));
+				C->coc1 = (isnanf(REG_SF(fs)) || isnanf(REG_SF(ft)));
 				break;
 			case 58: // C.SEQ.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 50: // C.EQ.S
-				C->coc1 = (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
+				C->coc1 = (REG_SF(fs) == REG_SF(ft));
 				break;
 			case 59: // C.NGL.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 51: // C.UEQ.S
-				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] == C->c1.sf[ft][0]);
+				C->coc1 = (isnanf(REG_SF(fs)) || isnanf(REG_SF(ft))) || (REG_SF(fs) == REG_SF(ft));
 				break;
 			case 60: // C.LT.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 52: // C.OLT.S
-				C->coc1 = (C->c1.sf[fs][0] < C->c1.sf[ft][0]);
+				C->coc1 = (REG_SF(fs) < REG_SF(ft));
 				break;
 			case 61: // C.NGE.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 53: // C.ULT.S
-				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] < C->c1.sf[ft][0]);
+				C->coc1 = (isnanf(REG_SF(fs)) || isnanf(REG_SF(ft))) || (REG_SF(fs) < REG_SF(ft));
 				break;
 			case 62: // C.LE.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 54: // C.OLE.S
-				C->coc1 = (C->c1.sf[fs][0] <= C->c1.sf[ft][0]);
+				C->coc1 = (REG_SF(fs) <= REG_SF(ft));
 				break;
 			case 63: // C.NGT.S
 				TRAP_ON_NAN_FS_FT_S;
 			case 55: // C.ULE.S
-				C->coc1 = (isnanf(C->c1.sf[fs][0]) || isnanf(C->c1.sf[ft][0])) || (C->c1.sf[fs][0] <= C->c1.sf[ft][0]);
+				C->coc1 = (isnanf(REG_SF(fs)) || isnanf(REG_SF(ft))) || (REG_SF(fs) <= REG_SF(ft));
 				break;
 
 			default:
@@ -209,78 +212,78 @@
 		// D instructions
 		case 17: switch(op&0x3F) {
 			case 0: // ADD.D
-				C->c1.df[fd] = C->c1.df[fs] + C->c1.df[ft];
+				REG_DF(fd) = REG_DF(fs) + REG_DF(ft);
 				break;
 
 			case 1: // SUB.D
-				C->c1.df[fd] = C->c1.df[fs] - C->c1.df[ft];
+				REG_DF(fd) = REG_DF(fs) - REG_DF(ft);
 				break;
 
 			case 2: // MUL.D
-				C->c1.df[fd] = C->c1.df[fs] * C->c1.df[ft];
+				REG_DF(fd) = REG_DF(fs) * REG_DF(ft);
 				break;
 
 			case 3: // DIV.D
-				C->c1.df[fd] = C->c1.df[fs] / C->c1.df[ft];
+				REG_DF(fd) = REG_DF(fs) / REG_DF(ft);
 				break;
 
 			case 4: // SQRT.D
-				C->c1.df[fd] = sqrt(C->c1.df[fs]);
+				REG_DF(fd) = sqrt(REG_DF(fs));
 				break;
 
 			case 5: // ABS.D
-				C->c1.df[fd] = fabs(C->c1.df[fs]);
+				REG_DF(fd) = fabs(REG_DF(fs));
 				break;
 
 			case 6: // MOV.D
-				C->c1.df[fd] = C->c1.df[fs];
+				REG_DF(fd) = REG_DF(fs);
 				break;
 
 			case 7: // NEG.D
-				C->c1.df[fd] = -C->c1.df[fs];
+				REG_DF(fd) = -REG_DF(fs);
 				break;
 
 			case 8: // ROUND.L.D
-				C->c1.di[fd] = n64_round(C->c1.df[fs]);
+				C->c1.di[fd] = n64_round(REG_DF(fs));
 				break;
 
 			case 9: // TRUNC.L.D
-				C->c1.di[fd] = trunc(C->c1.df[fs]);
+				C->c1.di[fd] = trunc(REG_DF(fs));
 				break;
 
 			case 10: // CEIL.L.D
-				C->c1.di[fd] = ceil(C->c1.df[fs]);
+				C->c1.di[fd] = ceil(REG_DF(fs));
 				break;
 
 			case 11: // FLOOR.L.D
-				C->c1.di[fd] = floor(C->c1.df[fs]);
+				C->c1.di[fd] = floor(REG_DF(fs));
 				break;
 
 			case 12: // ROUND.W.D
-				C->c1.di[fd] = n64_round(C->c1.df[fs]);
+				C->c1.di[fd] = n64_round(REG_DF(fs));
 				break;
 
 			case 13: // TRUNC.W.D
-				C->c1.di[fd] = trunc(C->c1.df[fs]);
+				C->c1.di[fd] = trunc(REG_DF(fs));
 				break;
 
 			case 14: // CEIL.W.D
-				C->c1.di[fd] = ceil(C->c1.df[fs]);
+				C->c1.di[fd] = ceil(REG_DF(fs));
 				break;
 
 			case 15: // FLOOR.W.D
-				C->c1.di[fd] = floor(C->c1.df[fs]);
+				C->c1.di[fd] = floor(REG_DF(fs));
 				break;
 
 			case 32: // CVT.S.D
-				C->c1.sf[fd][0] = C->c1.df[fs];
+				REG_SF(fd) = REG_DF(fs);
 				break;
 
 			case 36: // CVT.W.D
-				C->c1.di[fd] = (SREG)(int32_t)C->c1.df[fs];
+				C->c1.di[fd] = (SREG)(int32_t)REG_DF(fs);
 				break;
 			case 37: // CVT.L.D
-				C->c1.di[fd] = C->c1.df[fs];
+				C->c1.di[fd] = REG_DF(fs);
 				break;
 
 			case 56: // C.SF.D
@@ -291,37 +294,37 @@
 			case 57: // C.NGLE.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 49: // C.UN.D
-				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft]));
+				C->coc1 = (isnan(REG_DF(fs)) || isnan(REG_DF(ft)));
 				break;
 			case 58: // C.SEQ.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 50: // C.EQ.D
-				C->coc1 = (C->c1.df[fs] == C->c1.df[ft]);
+				C->coc1 = (REG_DF(fs) == REG_DF(ft));
 				break;
 			case 59: // C.NGL.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 51: // C.UEQ.D
-				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] == C->c1.df[ft]);
+				C->coc1 = (isnan(REG_DF(fs)) || isnan(REG_DF(ft))) || (REG_DF(fs) == REG_DF(ft));
 				break;
 			case 60: // C.LT.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 52: // C.OLT.D
-				C->coc1 = (C->c1.df[fs] < C->c1.df[ft]);
+				C->coc1 = (REG_DF(fs) < REG_DF(ft));
 				break;
 			case 61: // C.NGE.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 53: // C.ULT.D
-				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] < C->c1.df[ft]);
+				C->coc1 = (isnan(REG_DF(fs)) || isnan(REG_DF(ft))) || (REG_DF(fs) < REG_DF(ft));
 				break;
 			case 62: // C.LE.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 54: // C.OLE.D
-				C->coc1 = (C->c1.df[fs] <= C->c1.df[ft]);
+				C->coc1 = (REG_DF(fs) <= REG_DF(ft));
 				break;
 			case 63: // C.NGT.D
 				TRAP_ON_NAN_FS_FT_D;
 			case 55: // C.ULE.D
-				C->coc1 = (isnan(C->c1.df[fs]) || isnan(C->c1.df[ft])) || (C->c1.df[fs] <= C->c1.df[ft]);
+				C->coc1 = (isnan(REG_DF(fs)) || isnan(REG_DF(ft))) || (REG_DF(fs) <= REG_DF(ft));
 				break;
 
 			default:
@@ -335,20 +338,20 @@
 		// W instructions
 		case 20: switch(op&0x3F) {
 			case 32: // CVT.S.W
-				C->c1.sf[fd][0] = (SREG)(int32_t)C->c1.di[fs];
+				REG_SF(fd) = (SREG)(int32_t)C->c1.di[fs];
 				break;
 			case 33: // CVT.D.W
-				C->c1.df[fd] = (SREG)(int32_t)C->c1.di[fs];
+				REG_DF(fd) = (SREG)(int32_t)C->c1.di[fs];
 				break;
 		} break;
 
 		// L instructions
 		case 21: switch(op&0x3F) {
 			case 32: // CVT.S.L
-				C->c1.sf[fd][0] = (SREG)C->c1.di[fs];
+				REG_SF(fd) = (SREG)C->c1.di[fs];
 				break;
 			case 33: // CVT.D.L
-				C->c1.df[fd] = (SREG)C->c1.di[fs];
+				REG_DF(fd) = (SREG)C->c1.di[fs];
 				break;
 		} break;
 
@@ -360,3 +363,7 @@
 			return MER_RI;
 	}
 }
+
+#undef REG_SF
+#undef REG_DF
+

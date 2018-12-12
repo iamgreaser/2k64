@@ -114,6 +114,7 @@ uint32_t mi_intr_mask = 0;
 uint32_t rdreg_mode = 0;
 
 uint64_t global_clock = 0;
+uint32_t frame_counter = 0;
 
 // MIPS CPUs
 #include "vr4300.h"
@@ -186,13 +187,15 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		data_out = pifmem[(addr-0x1FC00000U)>>2];
 
 		if((addr&0x7FF) >= 0x7C0) {
+#if DEBUG_PIFRAM
 			printf("PIF RAM read %016llX pc %016llX op %08X mask %08X\n",
 				addr, C->pl0_pc, C->pl0_op, mask);
+#endif
 			//usleep(100000);
 		}
 
 	} else if(addr >= 0x03F00000 && addr < 0x03FFFFFF) {
-#ifdef DEBUG_RDREG
+#if DEBUG_RDREG
 		printf("RDREG read %016llX mask %08X\n",
 			(unsigned long long)addr, mask);
 #endif
@@ -439,7 +442,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		return;
 
 	} else if(addr >= 0x03F00000 && addr < 0x03FFFFFF) {
-#ifdef DEBUG_RDREG
+#if DEBUG_RDREG
 		printf("RDREG write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
@@ -461,7 +464,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	} else if(addr >= 0x04040000 && addr < 0x0404FFFF) {
 		struct rsp *rsp = &rsp_baseinst;
 
-#ifdef DEBUG_SP
+#if DEBUG_SP
 		printf("SP write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
@@ -527,7 +530,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 	} else if(addr >= 0x04080000 && addr < 0x0408FFFF) {
 		struct rsp *rsp = &rsp_baseinst;
 
-#ifdef DEBUG_SP
+#if DEBUG_SP
 		printf("SP8 write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
@@ -659,6 +662,9 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				// "v1.0" is 15-bit, "v2.0" is 18-bit?
 				ai_len = data & 0x3FFFF;
 				ai_len = (ai_len+0x7)&~0x7;
+				if(ai_len == 0) {
+					break;
+				}
 				for(int i = 0; i < ai_len>>2; i++) {
 					uint32_t v = ram[((ai_dram_addr>>2)+i)&(RAM_SIZE_WORDS-1)];
 					//if(v != 0) {
@@ -806,8 +812,10 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 	} else if(addr >= 0x1FC007C0U && addr < 0x1FC00000U+4*2*256) {
 		data_out_ptr = &pifmem[((addr&0x3F)+0x7C0)>>2];
+#if DEBUG_PIFRAM
 		printf("PIF RAM write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
+#endif
 
 		if(addr == 0x1FC007FC) {
 			// HACK.
@@ -1119,6 +1127,12 @@ int main(int argc, char *argv[])
 		// FIXME also find out when this really happens
 		if(global_clock % (6250*262) == 6250*240) {
 			printf(" - NEW FRAME - \n");
+			char title_buf[256];
+			snprintf(title_buf, sizeof(title_buf)-1, "2k64 - frame %d", frame_counter);
+			title_buf[sizeof(title_buf)-1] = 0;
+			SDL_SetWindowTitle(window, title_buf);
+			frame_counter++;
+
 			SDL_LockSurface(surface);
 #include "vi/render.h"
 			SDL_UnlockSurface(surface);

@@ -170,7 +170,7 @@ switch(rs) {
 		} break;
 
 		case 7: // SP_RESERVED
-			printf("SP_RESERVED %08X\n", C->regs[rt]);
+			//printf("SP_RESERVED %08X\n", C->regs[rt]);
 			if(C->regs[rt] == 0) {
 				C->c0.n.sp_reserved = 0;
 			}
