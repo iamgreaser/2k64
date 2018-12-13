@@ -45,7 +45,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 enum mipserr n64rsp_mem_read(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t *data);
 void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t data);
 
-#if 1
+#if 0
 #define DEBUG_AI 1
 #define DEBUG_DP 1
 #define DEBUG_MI 1
@@ -57,6 +57,7 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #define DEBUG_RDREG 1
 #else
 #define DEBUG_SP 1
+#define DEBUG_PIFRAM 1
 #endif
 
 #if 1
