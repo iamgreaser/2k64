@@ -604,6 +604,10 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 		printf("COUNT INTR\n");
 		C->c0.n.cause |= 0x8000;
 	}
+	if(C->tickwait > 0) {
+		C->tickwait -= 1;
+		return e;
+	}
 #endif
 
 #ifdef MIPS_IS_RSP
@@ -726,5 +730,6 @@ void MIPSXNAME(_cpu_init)(struct MIPSNAME *C)
 	// initialise clock
 	C->tickrem = 0;
 	C->ticktime = 0;
+	C->tickwait = 0;
 }
 

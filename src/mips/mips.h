@@ -146,6 +146,8 @@ struct MIPSNAME
 	int64_t tickrem;
 	uint64_t ticktime;
 
+	int64_t tickwait;
+
 	// pipelining
 	uint32_t pl0_op;
 	SREG pl0_pc;

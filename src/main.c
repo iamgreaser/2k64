@@ -172,6 +172,10 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 
 	if(addr < RAM_SIZE_BYTES) {
 		//data_out = ram[(addr & (RAM_SIZE_BYTES-1))>>2];
+
+		// TODO: get a better idea of how memory delays work
+		C->tickwait += 5-1;
+
 		data_out = ram[addr>>2];
 
 	} else if(addr <= 0x03EFFFFFU) {
@@ -182,6 +186,9 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		assert(addr-0x10000000U >= 0U);
 		assert(addr-0x10000000U < sizeof(cartmem));
 		data_out = cartmem[(addr-0x10000000U)>>2];
+
+		// TODO: get a better idea of how memory delays work
+		C->tickwait += 65+(19+4)*2;
 
 	} else if(addr >= 0x1FC00000U && addr < 0x1FC00000U+4*2*256) {
 		data_out = pifmem[(addr-0x1FC00000U)>>2];
@@ -422,6 +429,9 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		//data_out_ptr = &ram[(addr & (RAM_SIZE_BYTES-1))>>2];
 		data_out_ptr = &ram[addr>>2];
 
+		// TODO: get a better idea of how memory delays work
+		C->tickwait += 5-1;
+
 		//if(addr == 0x000003F0) {
 		//if(addr == 0x00000318) {
 		if(addr == (pifseed == 0x0000913F ? 0x000003F0 : 0x00000318)) {
@@ -615,7 +625,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 	} else if(addr >= 0x04400000 && addr < 0x044FFFFF) {
 #if DEBUG_VI
-		printf("pl0 PC = %016llX\n", C->pl0_pc);
+		//printf("pl0 PC = %016llX\n", C->pl0_pc);
 		printf("VI write %016llX mask %08X data %08X\n",
 			(unsigned long long)addr, mask, data);
 #endif
@@ -1013,12 +1023,17 @@ int main(int argc, char *argv[])
 			int src = rsp->c0.n.dma_cache;
 			int dst = rsp->c0.n.dma_dram;
 
-			length += 7; length &= ~7;
+			//length += 7;
+			length &= ~7;
+			length += 8;
 
 			assert((src & 0x7) == 0);
 			assert((dst & 0x7) == 0);
 			assert((length & 0x7) == 0);
 			assert((skip & 0x7) == 0);
+
+			// FIXME this needs to cool off properly
+			rsp->tickwait = 5*(length>>3)*4;
 
 			for(int y = 0; y <= count; y++) {
 				for(int x = 0; x < length>>3; x++) {
@@ -1051,7 +1066,9 @@ int main(int argc, char *argv[])
 			int dst = rsp->c0.n.dma_cache;
 			int src = rsp->c0.n.dma_dram;
 
-			length += 7; length &= ~7;
+			//length += 7;
+			length &= ~7;
+			length += 8;
 
 			assert((dst & 0x7) == 0);
 			assert((src & 0x7) == 0);
