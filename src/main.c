@@ -794,21 +794,22 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		{
 			case 0x04600000: // PI_DRAM_ADDR_REG
 				pi_dram_addr = data & 0xFFFFFF;
-				pi_dram_addr &= ~0x7;
 				break;
 			case 0x04600004: // PI_CART_ADDR_REG
 				pi_cart_addr = data & 0xFFFFFF;
-				pi_cart_addr &= ~0x1;
 				break;
-			case 0x04600008: // PI_RD_LEN_REG
-				pi_rd_len = data & 0xFFFFFF;
-				pi_rd_len += 1;
-				pi_status |= 0x1;
-				break;
+			//case 0x04600008: // PI_RD_LEN_REG
+			//	pi_rd_len = data & 0xFFFFF8;
+			//	pi_rd_len += 1;
+			//	pi_status |= 0x1;
+			//	break;
 			case 0x0460000C: // PI_WR_LEN_REG
 				pi_wr_len = data & 0xFFFFFF;
+				pi_wr_len |= 0x7;
 				pi_wr_len += 1;
-				pi_status |= 0x1;
+				if((pi_wr_len&~0x7) != 0) {
+					pi_status |= 0x1;
+				}
 				break;
 			case 0x04600010: // PI_STATUS_REG
 				if((data & 0x0002) != 0) { n64_clear_interrupt(0x10); }
@@ -818,29 +819,29 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		}
 
 		// FIXME: this is lazy and should actually emulate separately
-#if 1
-		if((pi_wr_len&~7) != 0) {
-			while((pi_wr_len&~7) != 0) {
+		if(pi_wr_len != 0) {
+			printf("PI DMA WRITE RAM %08X <- %08X CART %08X BYTES\n", pi_dram_addr, pi_cart_addr, pi_wr_len);
+			pi_dram_addr &= ~0x7;
+			pi_cart_addr &= ~0x1;
+			while(pi_wr_len != 0) {
 				uint32_t mdata0, mdata1, mdata2, mdata3;
-				//uint32_t data = cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
-				//ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = data;
 
-				pi_cart_addr &= 0x00FFFFFF;
-				mdata0 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				assert(pi_cart_addr <= sizeof(cartmem)-8);
+				mdata0 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
 				pi_cart_addr += 2;
-				mdata1 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				mdata1 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
 				pi_cart_addr += 2;
-				mdata2 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				mdata2 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
 				pi_cart_addr += 2;
-				mdata3 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				mdata3 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
 				pi_cart_addr += 2;
 
 				//printf("copy %08X %04X %04X %04X %04X\n", pi_cart_addr-8, mdata0, mdata1, mdata2, mdata3);
 
-				pi_dram_addr &= 0x00FFFFFF;
-				ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = (mdata0<<16)|mdata1;
+				assert(pi_dram_addr <= RAM_SIZE_BYTES-8);
+				ram[(pi_dram_addr>>2)] = (mdata0<<16)|mdata1;
 				pi_dram_addr += 4;
-				ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = (mdata2<<16)|mdata3;
+				ram[(pi_dram_addr>>2)] = (mdata2<<16)|mdata3;
 				pi_dram_addr += 4;
 
 				//printf("paste @ %08X\n", pi_dram_addr-8);
@@ -851,17 +852,6 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 			n64_set_interrupt(0x10);
 			pi_status &= ~0x1;
 		}
-#else
-		if(pi_wr_len != 0) {
-			uint32_t *src = &cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
-			uint32_t *dst = &ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))];
-			memcpy(dst, src, pi_wr_len);
-			pi_wr_len = 0;
-			printf("PI DMA WRITE\n");
-			n64_set_interrupt(0x10);
-		}
-		pi_status &= ~0x1;
-#endif
 
 		return;
 
@@ -1112,9 +1102,8 @@ int main(int argc, char *argv[])
 			int src = rsp->c0.n.dma_cache;
 			int dst = rsp->c0.n.dma_dram;
 
-			//length += 7;
-			length &= ~7;
-			length += 8;
+			length |= 0x7;
+			length += 1;
 
 			assert((src & 0x7) == 0);
 			assert((dst & 0x7) == 0);
@@ -1155,9 +1144,8 @@ int main(int argc, char *argv[])
 			int dst = rsp->c0.n.dma_cache;
 			int src = rsp->c0.n.dma_dram;
 
-			//length += 7;
-			length &= ~7;
-			length += 8;
+			length |= 0x7;
+			length += 1;
 
 			assert((dst & 0x7) == 0);
 			assert((src & 0x7) == 0);
