@@ -177,6 +177,7 @@ void write_pif_for_command(uint32_t ptr, uint8_t data)
 	assert(ptr < 64);
 	pifmem[((ptr+0x7C0)>>2)] &= ~(0xFF<<(((~ptr)&3)*8));
 	pifmem[((ptr+0x7C0)>>2)] |= ((0xFF&data)<<(((~ptr)&3)*8));
+	//printf("%08X\n", pifmem[((ptr+0x7C0)>>2)]);
 }
 
 void handle_pif_command(void)
@@ -203,7 +204,7 @@ void handle_pif_command(void)
 		uint8_t rptr = ptr;
 		ptr += rcnt;
 
-		printf("COMMAND %02X: %02X (r=%02X, s=%02X, p=%02X)\n", channel, cmd, rcnt, scnt, ptr);
+		printf("COMMAND %02X: %02X (r=%02X, s=%02X, p=%02X, rp=%02X, sp=%02X)\n", channel, cmd, rcnt, scnt, ptr, rptr, sptr);
 
 		switch(cmd) {
 			case 0x00:
@@ -211,6 +212,7 @@ void handle_pif_command(void)
 					write_pif_for_command(rcnt_ptr, read_pif_for_command(rcnt_ptr)|0x40);
 					break;
 				}
+				//write_pif_for_command(rcnt_ptr, read_pif_for_command(rcnt_ptr)|0x80);
 				write_pif_for_command(rptr+0, 0x05);
 				write_pif_for_command(rptr+1, 0x00);
 				write_pif_for_command(rptr+2, 0x02);
@@ -221,6 +223,7 @@ void handle_pif_command(void)
 					write_pif_for_command(rcnt_ptr, read_pif_for_command(rcnt_ptr)|0x40);
 					break;
 				}
+				//write_pif_for_command(rcnt_ptr, read_pif_for_command(rcnt_ptr)|0x80);
 				write_pif_for_command(rptr+0, 0x00);
 				write_pif_for_command(rptr+1, 0x00);
 				write_pif_for_command(rptr+2, 0x00);
@@ -228,14 +231,9 @@ void handle_pif_command(void)
 				break;
 
 			default:
-				write_pif_for_command(rcnt_ptr, read_pif_for_command(rcnt_ptr)|0xC0);
+				write_pif_for_command(rcnt_ptr, read_pif_for_command(rcnt_ptr)|0x40);
 				break;
 		}
-	}
-	for(int i = 0; i < 4; i++) {
-		pifmem[0+2*i] &= ~0x0000FF00;
-		pifmem[0+2*i] |=  0x00000000;
-		pifmem[1+2*i]  =  0xFFFF0000;
 	}
 	pifmem[0x3F] &= ~0x000000FF;
 	pifmem[0x3F] |=  0x00000000;
@@ -821,34 +819,36 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 		// FIXME: this is lazy and should actually emulate separately
 #if 1
-		while((pi_wr_len&~7) != 0) {
-			uint32_t mdata0, mdata1, mdata2, mdata3;
-			//uint32_t data = cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
-			//ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = data;
+		if((pi_wr_len&~7) != 0) {
+			while((pi_wr_len&~7) != 0) {
+				uint32_t mdata0, mdata1, mdata2, mdata3;
+				//uint32_t data = cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))];
+				//ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = data;
 
-			pi_cart_addr &= 0x00FFFFFF;
-			mdata0 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
-			pi_cart_addr += 2;
-			mdata1 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
-			pi_cart_addr += 2;
-			mdata2 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
-			pi_cart_addr += 2;
-			mdata3 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
-			pi_cart_addr += 2;
+				pi_cart_addr &= 0x00FFFFFF;
+				mdata0 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				pi_cart_addr += 2;
+				mdata1 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				pi_cart_addr += 2;
+				mdata2 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				pi_cart_addr += 2;
+				mdata3 = 0xFFFF & cartmem[(pi_cart_addr>>2)%(sizeof(cartmem)/sizeof(uint32_t))]>>(8*((~pi_cart_addr)&0x2));
+				pi_cart_addr += 2;
 
-			//printf("copy %08X %04X %04X %04X %04X\n", pi_cart_addr-8, mdata0, mdata1, mdata2, mdata3);
+				//printf("copy %08X %04X %04X %04X %04X\n", pi_cart_addr-8, mdata0, mdata1, mdata2, mdata3);
 
-			pi_dram_addr &= 0x00FFFFFF;
-			ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = (mdata0<<16)|mdata1;
-			pi_dram_addr += 4;
-			ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = (mdata2<<16)|mdata3;
-			pi_dram_addr += 4;
+				pi_dram_addr &= 0x00FFFFFF;
+				ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = (mdata0<<16)|mdata1;
+				pi_dram_addr += 4;
+				ram[(pi_dram_addr>>2)%(RAM_SIZE_BYTES/sizeof(uint32_t))] = (mdata2<<16)|mdata3;
+				pi_dram_addr += 4;
 
-			//printf("paste @ %08X\n", pi_dram_addr-8);
+				//printf("paste @ %08X\n", pi_dram_addr-8);
 
-			pi_wr_len -= 8;
-		}
-		if((pi_wr_len&~7) == 0) {
+				pi_wr_len -= 8;
+			}
+
+			n64_set_interrupt(0x10);
 			pi_status &= ~0x1;
 		}
 #else
@@ -926,6 +926,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 		if(addr == 0x1FC007FC) {
 			// HACK.
+			printf("PIF FLAG SET %02X\n", data&0xFF);
 			switch(data&mask&0xFF)
 			{
 				case 0x01:
