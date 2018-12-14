@@ -796,7 +796,7 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 				pi_dram_addr = data & 0xFFFFFF;
 				break;
 			case 0x04600004: // PI_CART_ADDR_REG
-				pi_cart_addr = data & 0xFFFFFF;
+				pi_cart_addr = data & 0x0FFFFFFF;
 				break;
 			//case 0x04600008: // PI_RD_LEN_REG
 			//	pi_rd_len = data & 0xFFFFF8;
