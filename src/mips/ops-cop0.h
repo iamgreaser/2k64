@@ -66,6 +66,11 @@ switch(rs) {
 				C->regs[rt] = C->c0.n.context;
 				SIGNEX32R(C, rt);
 			} break;
+		case 5: // c0_pagemask
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.pagemask;
+				SIGNEX32R(C, rt);
+			} break;
 		case 8: // c0_badvaddr
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.badvaddr;
@@ -122,11 +127,11 @@ switch(rs) {
 #ifdef MIPS_IS_RSP
 		case 0: // DMA_CACHE
 			rsp_debug_printf("DMA_CACHE %08X\n", C->regs[rt]);
-			C->c0.n.dma_cache = C->regs[rt] & 0x1FFF;
+			C->c0.n.dma_cache = C->regs[rt] & 0x1FF8;
 			break;
 		case 1: // DMA_DRAM
 			rsp_debug_printf("DMA_DRAM %08X\n", C->regs[rt]);
-			C->c0.n.dma_dram = C->regs[rt] & 0xFFFFFF;
+			C->c0.n.dma_dram = C->regs[rt] & 0xFFFFF8;
 			break;
 		case 2: // DMA_READ_LENGTH
 			rsp_debug_printf("DMA_READ_LENGTH %08X\n", C->regs[rt]);

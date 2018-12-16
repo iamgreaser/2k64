@@ -32,6 +32,18 @@ void MIPSXNAME(_cpu_reset)(struct MIPSNAME *C)
 #endif
 }
 
+void MIPSXNAME(_print_reg_dump)(struct MIPSNAME *C)
+{
+	for(int i = 0; i < 32; i++) {
+		//printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
+#ifdef MIPS_IS_RSP
+		printf("$%s = %08X | $c0_%-2d = %08X | $v%-2d = %016llX%016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c2.d[i][0], C->c2.d[i][1]);
+#else
+		printf("$%s = %016llX | $c0_%-2d = %016llX | $f%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c1.di[i]);
+#endif
+	}
+}
+
 void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr cause, bool bd)
 {
 	assert(cause >= MER_Int && cause <= MER_Ov);
@@ -47,14 +59,7 @@ void MIPSXNAME(_throw_exception)(struct MIPSNAME *C, UREG epc, enum mipserr caus
 	}
 
 	if(show_throws) { // && cause != MER_Int) {
-		for(int i = 0; i < 32; i++) {
-			//printf("$%s = %016llX\n", mips_gpr_names[i], C->regs[i]);
-#ifdef MIPS_IS_RSP
-			printf("$%s = %08X | $c0_%-2d = %08X | $v%-2d = %016llX%016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c2.d[i][0], C->c2.d[i][1]);
-#else
-			printf("$%s = %016llX | $c0_%-2d = %016llX | $f%-2d = %016llX\n", mips_gpr_names[i], C->regs[i], i, C->c0.i[i], i, C->c1.di[i]);
-#endif
-		}
+		MIPSXNAME(_print_reg_dump)(C);
 	}
 
 #if 0
@@ -626,6 +631,17 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 	enum mipserr e_ifetch = MIPSXNAME(_fetch_op)(C, &(C->pl0_op));
 	new_op = C->pl0_op;
 
+#ifdef MIPS_IS_RSP
+	op_pc &= 0xFFF;
+	op_pc |= 0x04001000;
+#endif
+
+#ifdef MIPS_IS_RSP
+#if 0
+	printf("OPDATA: %016llX: %08X\n", op_pc, op);
+	MIPSXNAME(_print_reg_dump)(C);
+#endif
+#endif
 	//printf("OPDATA: %016llX: %08X\n", op_pc, op);
 
 	// Run op

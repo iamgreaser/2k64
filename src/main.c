@@ -555,11 +555,11 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		switch(addr)
 		{
 			case 0x04040000: // DMA_CACHE
-				rsp->c0.n.dma_cache = data & 0x1FFF;
+				rsp->c0.n.dma_cache = data & 0x1FF8;
 				rsp_debug_printf("DMA_CACHE %08X\n", data);
 				break;
 			case 0x04040004: // DMA_DRAM
-				rsp->c0.n.dma_dram = data & 0xFFFFFF;
+				rsp->c0.n.dma_dram = data & 0xFFFFF8;
 				rsp_debug_printf("DMA_DRAM %08X\n", data);
 				break;
 			case 0x04040008: // DMA_READ_LENGTH
@@ -821,30 +821,31 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 		// FIXME: this is lazy and should actually emulate separately
 		if(pi_wr_len != 0) {
 			printf("PI DMA WRITE RAM %08X <- %08X CART %08X BYTES\n", pi_dram_addr, pi_cart_addr, pi_wr_len);
-			pi_dram_addr &= ~0x7;
-			pi_cart_addr &= ~0x1;
+			uint32_t dst = pi_dram_addr & ~0x7;
+			uint32_t src = pi_cart_addr & ~0x1;
+
 			while(pi_wr_len != 0) {
 				uint32_t mdata0, mdata1, mdata2, mdata3;
 
-				assert(pi_cart_addr <= sizeof(cartmem)-8);
-				mdata0 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
-				pi_cart_addr += 2;
-				mdata1 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
-				pi_cart_addr += 2;
-				mdata2 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
-				pi_cart_addr += 2;
-				mdata3 = 0xFFFF & cartmem[(pi_cart_addr>>2)]>>(8*((~pi_cart_addr)&0x2));
-				pi_cart_addr += 2;
+				assert(src <= sizeof(cartmem)-8);
+				mdata0 = 0xFFFF & cartmem[(src>>2)]>>(8*((~src)&0x2));
+				src += 2;
+				mdata1 = 0xFFFF & cartmem[(src>>2)]>>(8*((~src)&0x2));
+				src += 2;
+				mdata2 = 0xFFFF & cartmem[(src>>2)]>>(8*((~src)&0x2));
+				src += 2;
+				mdata3 = 0xFFFF & cartmem[(src>>2)]>>(8*((~src)&0x2));
+				src += 2;
 
-				//printf("copy %08X %04X %04X %04X %04X\n", pi_cart_addr-8, mdata0, mdata1, mdata2, mdata3);
+				//printf("copy %08X %04X %04X %04X %04X\n", src-8, mdata0, mdata1, mdata2, mdata3);
 
-				assert(pi_dram_addr <= RAM_SIZE_BYTES-8);
-				ram[(pi_dram_addr>>2)] = (mdata0<<16)|mdata1;
-				pi_dram_addr += 4;
-				ram[(pi_dram_addr>>2)] = (mdata2<<16)|mdata3;
-				pi_dram_addr += 4;
+				assert(dst <= RAM_SIZE_BYTES-8);
+				ram[(dst>>2)] = (mdata0<<16)|mdata1;
+				dst += 4;
+				ram[(dst>>2)] = (mdata2<<16)|mdata3;
+				dst += 4;
 
-				//printf("paste @ %08X\n", pi_dram_addr-8);
+				//printf("paste @ %08X\n", dst-8);
 
 				pi_wr_len -= 8;
 			}
@@ -1091,10 +1092,12 @@ int main(int argc, char *argv[])
 		}
 
 		if(rsp->c0.n.dma_write_length != 0) {
-			rsp_debug_printf("RSP DMA write RSP=%08X -> MEM=%08X len %08X\n",
+#if DEBUG_SP
+			printf("RSP DMA write RSP=%08X -> MEM=%08X len %08X\n",
 				rsp->c0.n.dma_cache,
 				rsp->c0.n.dma_dram,
 				rsp->c0.n.dma_write_length);
+#endif
 
 			int length = rsp->c0.n.dma_write_length & 0xFFF;
 			int count = (rsp->c0.n.dma_write_length>>12) & 0xFF;
@@ -1125,18 +1128,22 @@ int main(int argc, char *argv[])
 					dst &= RAM_SIZE_BYTES-8;
 				}
 				dst += skip;
+				assert((dst & 0x7) == 0);
 				dst &= RAM_SIZE_BYTES-8;
 			}
 			rsp->c0.n.dma_write_length = 0;
-			rsp->c0.n.dma_cache = src;
-			rsp->c0.n.dma_dram = dst;
+			//rsp->c0.n.dma_cache = src;
+			//rsp->c0.n.dma_dram = dst;
 		}
 
 		if(rsp->c0.n.dma_read_length != 0) {
-			rsp_debug_printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
+#if DEBUG_SP
+			printf("RSP DMA read RSP=%08X <- MEM=%08X len %08X\n",
 				rsp->c0.n.dma_cache,
 				rsp->c0.n.dma_dram,
 				rsp->c0.n.dma_read_length);
+#endif
+
 
 			int length = rsp->c0.n.dma_read_length & 0xFFF;
 			int count = (rsp->c0.n.dma_read_length>>12) & 0xFF;
@@ -1164,11 +1171,12 @@ int main(int argc, char *argv[])
 					src &= RAM_SIZE_BYTES-8;
 				}
 				src += skip;
+				assert((src & 0x7) == 0);
 				src &= RAM_SIZE_BYTES-8;
 			}
 			rsp->c0.n.dma_read_length = 0;
-			rsp->c0.n.dma_cache = dst;
-			rsp->c0.n.dma_dram = src;
+			//rsp->c0.n.dma_cache = dst;
+			//rsp->c0.n.dma_dram = src;
 		}
 
 		rdp_run_commands();

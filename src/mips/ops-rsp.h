@@ -34,7 +34,7 @@ switch(rs) {
 		int i = (op>>7)&0xF;
 		rsp_debug_printf("MTC2 %d, %d[%d]\n", rt, rd, i);
 		assert((i&0x1) == 0);
-		C->c2.h[rd][e>>1] = C->regs[rt];
+		C->c2.h[rd][i>>1] = C->regs[rt];
 	} break;
 
 
