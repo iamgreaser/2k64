@@ -3,11 +3,13 @@ switch(rs) {
 	switch(rd) {
 
 #ifdef MIPS_IS_RSP
+#if 1
 		case 1: // DMA_DRAM
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.dma_dram;
 				SIGNEX32R(C, rt);
 			} break;
+#endif
 		case 4: // SP_STATUS
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.sp_status;
@@ -59,6 +61,16 @@ switch(rs) {
 		case 0: // c0_index
 			if(rt != 0) {
 				C->regs[rt] = C->c0.n.index;
+				SIGNEX32R(C, rt);
+			} break;
+		case 2: // c0_entrylo0
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.entrylo0;
+				SIGNEX32R(C, rt);
+			} break;
+		case 3: // c0_entrylo1
+			if(rt != 0) {
+				C->regs[rt] = C->c0.n.entrylo1;
 				SIGNEX32R(C, rt);
 			} break;
 		case 4: // c0_context
@@ -126,23 +138,34 @@ switch(rs) {
 
 #ifdef MIPS_IS_RSP
 		case 0: // DMA_CACHE
-			rsp_debug_printf("DMA_CACHE %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg DMA_CACHE %08X\n", C->regs[rt]);
+#endif
 			C->c0.n.dma_cache = C->regs[rt] & 0x1FF8;
 			break;
 		case 1: // DMA_DRAM
-			rsp_debug_printf("DMA_DRAM %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg DMA_DRAM %08X\n", C->regs[rt]);
+#endif
 			C->c0.n.dma_dram = C->regs[rt] & 0xFFFFF8;
 			break;
 		case 2: // DMA_READ_LENGTH
-			rsp_debug_printf("DMA_READ_LENGTH %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg DMA_READ_LENGTH %08X\n", C->regs[rt]);
+#endif
 			C->c0.n.dma_read_length = C->regs[rt];
 			break;
 		case 3: // DMA_WRITE_LENGTH
-			rsp_debug_printf("DMA_WRITE_LENGTH %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg DMA_WRITE_LENGTH %08X\n", C->regs[rt]);
+#endif
 			C->c0.n.dma_write_length = C->regs[rt];
 			break;
 
 		case 4: {
+#if DEBUG_SP
+			printf("RSP write reg SP_STATUS %08X\n", C->regs[rt]);
+#endif
 			uint32_t data = C->regs[rt];
 			if((data & 0x00000001) != 0) { C->c0.n.sp_status &= ~0x0001; }
 			if((data & 0x00000002) != 0) { C->c0.n.sp_status |=  0x0001; }
@@ -175,6 +198,9 @@ switch(rs) {
 		} break;
 
 		case 7: // SP_RESERVED
+#if DEBUG_SP
+			printf("RSP write reg SP_RESERVED %08X\n", C->regs[rt]);
+#endif
 			//printf("SP_RESERVED %08X\n", C->regs[rt]);
 			if(C->regs[rt] == 0) {
 				C->c0.n.sp_reserved = 0;
@@ -182,17 +208,26 @@ switch(rs) {
 			break;
 
 		case 8: // CMD_START
-			printf("CMD_START %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg CMD_START %08X\n", C->regs[rt]);
+#endif
+			//printf("CMD_START %08X\n", C->regs[rt]);
 			dpc_start = C->regs[rt];
 			dpc_status |= (1<<9);
 			break;
 		case 9: // CMD_END
-			printf("CMD_END %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg CMD_END %08X\n", C->regs[rt]);
+#endif
+			//printf("CMD_END %08X\n", C->regs[rt]);
 			dpc_end = C->regs[rt];
 			dpc_status |= (1<<10);
 			break;
 		case 11: // CMD_STATUS
-			printf("CMD_STATUS %08X\n", C->regs[rt]);
+#if DEBUG_SP
+			printf("RSP write reg CMD_STATUS %08X\n", C->regs[rt]);
+#endif
+			//printf("CMD_STATUS %08X\n", C->regs[rt]);
 			if((C->regs[rt] & 0x0001) != 0) { dpc_status &= ~0x0001; }
 			if((C->regs[rt] & 0x0002) != 0) { dpc_status |=  0x0001; }
 			if((C->regs[rt] & 0x0004) != 0) { dpc_status &= ~0x0002; }

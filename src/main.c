@@ -1132,8 +1132,8 @@ int main(int argc, char *argv[])
 				dst &= RAM_SIZE_BYTES-8;
 			}
 			rsp->c0.n.dma_write_length = 0;
-			//rsp->c0.n.dma_cache = src;
-			//rsp->c0.n.dma_dram = dst;
+			rsp->c0.n.dma_cache = src;
+			rsp->c0.n.dma_dram = dst;
 		}
 
 		if(rsp->c0.n.dma_read_length != 0) {
@@ -1175,8 +1175,8 @@ int main(int argc, char *argv[])
 				src &= RAM_SIZE_BYTES-8;
 			}
 			rsp->c0.n.dma_read_length = 0;
-			//rsp->c0.n.dma_cache = dst;
-			//rsp->c0.n.dma_dram = src;
+			rsp->c0.n.dma_cache = dst;
+			rsp->c0.n.dma_dram = src;
 		}
 
 		rdp_run_commands();

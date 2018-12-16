@@ -633,7 +633,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 
 #ifdef MIPS_IS_RSP
 	op_pc &= 0xFFF;
-	op_pc |= 0x04001000;
+	//op_pc |= 0x04001000;
 #endif
 
 #ifdef MIPS_IS_RSP
