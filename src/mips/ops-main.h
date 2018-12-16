@@ -862,9 +862,7 @@ switch(op>>26U) {
 				for(int i = 0; i < 8; i++) {
 					MIPSXNAME(_read16)(C, C->regs[v_base]+(i<<1)+(v_offset<<4), &mdata);
 					C->c2.h[v_vt][i] = mdata;
-					if(((C->regs[v_base]+((i+1)<<1))&~0xE) == 0) {
-						break;
-					}
+					if(((C->regs[v_base]+((i+1)<<1))&0xE) == 0) { break; }
 				}
 			} break;
 
@@ -975,9 +973,7 @@ switch(op>>26U) {
 				assert(v_element == 0);
 				for(int i = 0; i < 8; i++) {
 					MIPSXNAME(_write16)(C, C->regs[v_base]+(i<<1)+(v_offset<<4), C->c2.h[v_vt][i]);
-					if(((C->regs[v_base]+((i+1)<<1))&~0xE) == 0) {
-						break;
-					}
+					if(((C->regs[v_base]+((i+1)<<1))&0xE) == 0) { break; }
 				}
 			} break;
 
