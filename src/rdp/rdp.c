@@ -92,6 +92,9 @@ bool rdp_scissor_o = false;
 #define RDOM_ALPHA_COMPARE_EN (1ULL<<0)
 uint64_t rdp_other_modes = 0;
 
+// 0x30 Load Tlut
+uint32_t rdp_tlut_addr = 0;
+
 // 0x35 Set Tile
 uint32_t rdp_tile_format = 0;
 uint32_t rdp_tile_size = 0;
@@ -246,7 +249,7 @@ void rdp_run_one_command(void) {
 			uint32_t tile = (cmd>>24)&0x7;
 			uint32_t sh = (cmd>>12)&0xFFF;
 			uint32_t th = (cmd>>0)&0xFFF;
-			rdp_debug_printf("Render %d,%d -> %d,%d\n", sl, tl, sh, th);
+			rdp_debug_printf("Render ST %d,%d -> %d,%d\n", sl, tl, sh, th);
 
 			int16_t s = (rdp_cmd_buffer[1]>>48);
 			int16_t t = (rdp_cmd_buffer[1]>>32);
@@ -339,7 +342,8 @@ void rdp_run_one_command(void) {
 				//th <<= 1;
 				int tmem_stride = (rdp_tile_line+0)<<3;
 				int dram_stride = (rdp_texture_image_width+1);
-				rdp_debug_printf("Load Tlut %d,%d -> %d,%d - w=%d, addr=%08X\n", sl, tl, sh, th, tmem_stride, (rdp_tile_tmem_addr<<3));
+				rdp_tlut_addr = (rdp_tile_tmem_addr<<3);
+				rdp_debug_printf("Load Tlut %d,%d -> %d,%d - w=%d, addr=%08X, dram=%08X\n", sl, tl, sh, th, tmem_stride, (rdp_tile_tmem_addr<<3), (rdp_texture_image_addr));
 				for(int y = tl; y < th; y++) {
 					uint32_t tmem_offs = (rdp_tile_tmem_addr<<3);
 					uint32_t dram_offs = (rdp_texture_image_addr>>2);
@@ -381,7 +385,7 @@ void rdp_run_one_command(void) {
 				tl <<= 1;
 				th += 1;
 				th <<= 1;
-				rdp_debug_printf("Load %d,%d -> %d,%d - w=%d, addr=%08X\n", sl, tl, sh, th, tmem_stride, (rdp_tile_tmem_addr<<3));
+				rdp_debug_printf("Load %d,%d -> %d,%d - w=%d, addr=%08X, dram=%08X\n", sl, tl, sh, th, tmem_stride, (rdp_tile_tmem_addr<<3), (rdp_texture_image_addr));
 				for(int y = tl; y < th; y++) {
 					uint32_t tmem_offs = (rdp_tile_tmem_addr<<3);
 					uint32_t dram_offs = (rdp_texture_image_addr>>2);
@@ -446,7 +450,7 @@ void rdp_run_one_command(void) {
 			yh >>= 2;
 			xl >>= 2;
 			yl >>= 2;
-			rdp_debug_printf("Render %d,%d -> %d,%d\n", xl, yl, xh, yh);
+			rdp_debug_printf("Render XY %d,%d -> %d,%d\n", xl, yl, xh, yh);
 			switch((rdp_other_modes & RDOM_CYCLE_TYPE_MASK))
 			{
 				case RDOM_CYCLE_TYPE_FILL: {

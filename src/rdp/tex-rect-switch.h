@@ -2,6 +2,19 @@ switch(rdp_tile_size) {
 	// 4bpp
 	case 0: switch(rdp_tile_format) {
 
+		// Color Index
+		case 2: {
+			tmem_stride >>= 1;
+#define GET_TEX_DATA() \
+			uint32_t data_s = ((acc_s>>rdp_tile_shift_s)&rdp_tile_mask_s); \
+			uint32_t data = rdp_tmem[(tmem_offs+(data_s>>3))&0x3FF]; \
+			data >>= ((~data_s)&0x7)*4; \
+			data &= 0xF; \
+			data = rdp_tmem[((rdp_tlut_addr>>2)+data)&0x3FF];
+#include "rdp/tex-rect-per-fmt.h"
+#undef GET_TEX_DATA
+		} break;
+
 		// Intensity+Alpha
 		case 3: {
 			tmem_stride >>= 1;
