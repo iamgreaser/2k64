@@ -268,7 +268,6 @@ void rdp_run_one_command(void) {
 			yl >>= 2;
 			int tmem_stride = (rdp_tile_line+0)<<3;
 			int dram_stride = (rdp_color_image_width+1);
-			rdp_debug_printf("Render %d,%d -> %d,%d w=%d\n", xl, yl, xh, yh, tmem_stride);
 			int16_t acc_t = t;
 #include "rdp/tex-rect-switch.h"
 			rdp_cmd_len = 0;
@@ -314,19 +313,13 @@ void rdp_run_one_command(void) {
 
 		case 0x30:
 			rdp_debug_printf("RDP %016llX Load Tlut\n", cmd);
-			rdp_debug_printf(" --- TODO! --- \n");
-			rdp_cmd_len = 0;
-			break;
-
-		case 0x34:
-			rdp_debug_printf("RDP %016llX Load Tile\n", cmd);
 			{
 				uint32_t sl = (cmd>>44)&0xFFF;
 				uint32_t tl = (cmd>>32)&0xFFF;
 				uint32_t tile = (cmd>>24)&0x7;
 				uint32_t sh = (cmd>>12)&0xFFF;
 				uint32_t th = (cmd>>0)&0xFFF;
-				rdp_debug_printf("Load %d,%d -> %d,%d\n", sl, tl, sh, th);
+				rdp_debug_printf("Load Tlut %d,%d -> %d,%d t=%d\n", sl, tl, sh, th, tile);
 				sl >>= 2;
 				sh >>= 2;
 				tl >>= 2;
@@ -341,12 +334,54 @@ void rdp_run_one_command(void) {
 				sl <<= 1;
 				sh += 1;
 				sh <<= 1;
+				//tl <<= 1;
+				th += 1;
+				//th <<= 1;
+				int tmem_stride = (rdp_tile_line+0)<<3;
+				int dram_stride = (rdp_texture_image_width+1);
+				rdp_debug_printf("Load Tlut %d,%d -> %d,%d - w=%d, addr=%08X\n", sl, tl, sh, th, tmem_stride, (rdp_tile_tmem_addr<<3));
+				for(int y = tl; y < th; y++) {
+					uint32_t tmem_offs = (rdp_tile_tmem_addr<<3);
+					uint32_t dram_offs = (rdp_texture_image_addr>>2);
+					tmem_offs += tmem_stride*y;
+					dram_offs += dram_stride*y;
+					for(int x = sl; x < sh; x++) {
+						rdp_tmem[(tmem_offs+x)&0x3FF] = ram[(dram_offs+x)&RAM_SIZE_WORDS-1];
+					}
+				}
+			}
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x34:
+			rdp_debug_printf("RDP %016llX Load Tile\n", cmd);
+			{
+				uint32_t sl = (cmd>>44)&0xFFF;
+				uint32_t tl = (cmd>>32)&0xFFF;
+				uint32_t tile = (cmd>>24)&0x7;
+				uint32_t sh = (cmd>>12)&0xFFF;
+				uint32_t th = (cmd>>0)&0xFFF;
+				rdp_debug_printf("Load %d,%d -> %d,%d t=%d\n", sl, tl, sh, th, tile);
+				int tmem_stride = (rdp_tile_line+0)<<3;
+				int dram_stride = (rdp_texture_image_width+1);
+				sl >>= 2;
+				sh >>= 2;
+				tl >>= 2;
+				th >>= 2;
+				switch(rdp_tile_size)
+				{
+					case 0: sl >>= 3; sh >>= 3; tmem_stride >>= 3; dram_stride >>= 3; break;
+					case 1: sl >>= 2; sh >>= 2; tmem_stride >>= 2; dram_stride >>= 2; break;
+					case 2: sl >>= 1; sh >>= 1; tmem_stride >>= 1; dram_stride >>= 1; break;
+					case 3: sl >>= 0; sh >>= 0; tmem_stride >>= 0; dram_stride >>= 0; break;
+				}
+				sl <<= 1;
+				sh += 1;
+				sh <<= 1;
 				tl <<= 1;
 				th += 1;
 				th <<= 1;
-				int tmem_stride = (rdp_tile_line+0)<<3;
-				int dram_stride = (rdp_texture_image_width+1);
-				rdp_debug_printf("Load %d,%d -> %d,%d - w=%d\n", sl, tl, sh, th, tmem_stride);
+				rdp_debug_printf("Load %d,%d -> %d,%d - w=%d, addr=%08X\n", sl, tl, sh, th, tmem_stride, (rdp_tile_tmem_addr<<3));
 				for(int y = tl; y < th; y++) {
 					uint32_t tmem_offs = (rdp_tile_tmem_addr<<3);
 					uint32_t dram_offs = (rdp_texture_image_addr>>2);
@@ -376,6 +411,8 @@ void rdp_run_one_command(void) {
 			rdp_tile_ms = ((cmd>>8)&0x1)!=0;
 			rdp_tile_mask_s = (cmd>>4)&0xF;
 			rdp_tile_shift_s = (cmd>>0)&0xF;
+
+			rdp_debug_printf("index = %d, format = %d, size = %d\n", rdp_tile_idx, rdp_tile_format, rdp_tile_size);
 
 			rdp_tile_shift_t += 10;
 			rdp_tile_shift_s += 10;
@@ -485,7 +522,7 @@ void rdp_run_one_command(void) {
 
 		case 0x3E:
 			rdp_debug_printf("RDP %016llX Set Z Image\n", cmd);
-			rdp_texture_image_addr = (cmd>>0)&0x3FFFFFF;
+			rdp_z_image_addr = (cmd>>0)&0x3FFFFFF;
 			rdp_cmd_len = 0;
 			break;
 
