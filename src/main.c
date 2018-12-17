@@ -247,7 +247,8 @@ enum mipserr n64primary_mem_read(struct vr4300 *C, uint64_t addr, uint32_t mask,
 		//data_out = ram[(addr & (RAM_SIZE_BYTES-1))>>2];
 
 		// TODO: get a better idea of how memory delays work
-		C->tickwait += 5-1;
+		// FIXME: disabled for now while I don't have cache - this is purely so welcome.z64 runs smoothlyish
+		//C->tickwait += 5-1;
 
 		data_out = ram[addr>>2];
 
@@ -507,12 +508,14 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 		//if(addr == 0x000003F0) {
 		//if(addr == 0x00000318) {
-		if(addr == (pifseed == 0x0000913F ? 0x000003F0 : 0x00000318)) {
+		//if(addr == (pifseed == 0x0000913F ? 0x000003F0 : 0x00000318)) {
+		if((addr&~0x3) == 0x00000318) {
 			if(C->pl0_pc != 0xFFFFFFFFA4000538ULL) {
 				if(C->pl0_pc >= 0xFFFFFFFFA4000000ULL)
 				{
 				// FIXME: DETECT EXPANSION PAK PROPERLY
 				//printf("DEBUG ABORT: %08X (%016llX)\n", data, C->pl0_pc);
+				printf("MAGIC RAM SIZE KLUDGE: %08X (%016llX)\n", data, C->pl0_pc);
 				data = 8*1024*1024;
 				//fsync(ram_fd);
 				//abort();
