@@ -247,10 +247,10 @@ void rdp_run_one_command(void) {
 			}
 
 
-			int32_t t = (int16_t)(rdp_cmd_buffer[1]>>48);
-			int32_t s = (int16_t)(rdp_cmd_buffer[1]>>32);
-			int32_t dsdx = (int16_t)(rdp_cmd_buffer[1]>>16);
-			int32_t dtdy = (int16_t)(rdp_cmd_buffer[1]);
+			int32_t t = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>48);
+			int32_t s = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>32);
+			int32_t dsdx = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>16);
+			int32_t dtdy = (int16_t)(uint16_t)(rdp_cmd_buffer[1]);
 			uint32_t tile = (cmd>>24)&0x7;
 			int32_t yl = (cmd>>0)&0xFFF;
 			int32_t xl = (cmd>>12)&0xFFF;
@@ -431,10 +431,6 @@ void rdp_run_one_command(void) {
 			rdp_tile_mask_t <<= 2;
 			rdp_tile_mask_s -= 1;
 			rdp_tile_mask_t -= 1;
-
-			// FIXME get masking working
-			rdp_tile_mask_s = 0x3F;
-			rdp_tile_mask_t = 0x3F;
 
 			rdp_cmd_len = 0;
 			break;
