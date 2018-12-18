@@ -355,7 +355,15 @@ void rdp_run_one_command(void) {
 					tmem_offs += tmem_stride*y;
 					dram_offs += dram_stride*y;
 					for(int x = sl; x < sh; x++) {
-						rdp_tmem[(tmem_offs+x)&0x3FF] = ram[(dram_offs+x)&(RAM_SIZE_WORDS-1)];
+						uint32_t vb = ram[(dram_offs+x)&(RAM_SIZE_WORDS-1)];
+						uint32_t v0 = vb>>16;
+						uint32_t v1 = vb&0xFFFF;
+						v0 |= v0<<16;
+						v1 |= v1<<16;
+						rdp_tmem[(tmem_offs+x*4+0)&0x3FF] = v0;
+						rdp_tmem[(tmem_offs+x*4+1)&0x3FF] = v0;
+						rdp_tmem[(tmem_offs+x*4+2)&0x3FF] = v1;
+						rdp_tmem[(tmem_offs+x*4+3)&0x3FF] = v1;
 					}
 				}
 			}

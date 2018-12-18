@@ -1,5 +1,5 @@
 #define APPLY_PALETTE_RGBA16(data) \
-	data = rdp_tmem[(0x200+(rdp_tile_palette<<5)+(data>>1))&0x3FF]>>(16*((~data)&0x1)); \
+	data = rdp_tmem[(0x200+((data+(rdp_tile_palette<<4))<<1))&0x3FF]>>(16*((~data)&0x1)); \
 	data &= 0xFFFF; \
 	data = (0 \
 		| (((data>>0)&0x1)*0xFF) \

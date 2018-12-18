@@ -65,7 +65,7 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #define DEBUG_SP 0
 #define DEBUG_VI 0
 
-#define DEBUG_SHOW_TMEM 1
+#define DEBUG_SHOW_TMEM 0
 #endif
 
 #if 0
