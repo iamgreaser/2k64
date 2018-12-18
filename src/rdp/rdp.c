@@ -425,12 +425,8 @@ void rdp_run_one_command(void) {
 			// TODO: clamp
 			if(rdp_tile_mask_s == 0) { rdp_tile_mask_s = 0xF; }
 			if(rdp_tile_mask_t == 0) { rdp_tile_mask_t = 0xF; }
-			rdp_tile_mask_s += 1;
-			rdp_tile_mask_t += 1;
-			rdp_tile_mask_s <<= 2;
-			rdp_tile_mask_t <<= 2;
-			rdp_tile_mask_s -= 1;
-			rdp_tile_mask_t -= 1;
+			rdp_tile_mask_s = (1<<rdp_tile_mask_s)-1;
+			rdp_tile_mask_t = (1<<rdp_tile_mask_t)-1;
 
 			rdp_cmd_len = 0;
 			break;
