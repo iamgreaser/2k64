@@ -271,7 +271,7 @@ void rdp_run_one_command(void) {
 			switch(rdp_tile_size)
 			{
 				case 0: tmem_stride >>= 1; break;
-				case 1: tmem_stride >>= 2; break;
+				case 1: tmem_stride >>= 1; break;
 				case 2: tmem_stride >>= 1; break;
 				case 3: tmem_stride >>= 0; break;
 			}
@@ -281,6 +281,11 @@ void rdp_run_one_command(void) {
 #include "rdp/tex-rect-switch.h"
 			rdp_cmd_len = 0;
 		} break;
+
+		case 0x26:
+			rdp_debug_printf("RDP %016llX Sync Load\n", cmd);
+			rdp_cmd_len = 0;
+			break;
 
 		case 0x27:
 			rdp_debug_printf("RDP %016llX Sync Pipe\n", cmd);
@@ -295,6 +300,8 @@ void rdp_run_one_command(void) {
 		case 0x29:
 			rdp_debug_printf("RDP %016llX Sync Full\n", cmd);
 			rdp_cmd_len = 0;
+			printf("DP INTR\n");
+			n64_set_interrupt(0x20);
 			break;
 
 		case 0x2D:
@@ -338,7 +345,7 @@ void rdp_run_one_command(void) {
 				switch(2)
 				{
 					case 0: sl >>= 3; sh >>= 3; dram_stride >>= 3; tmem_stride >>= 1; break;
-					case 1: sl >>= 2; sh >>= 2; dram_stride >>= 2; tmem_stride >>= 2; break;
+					case 1: sl >>= 2; sh >>= 2; dram_stride >>= 2; tmem_stride >>= 1; break;
 					case 2: sl >>= 1; sh >>= 1; dram_stride >>= 1; tmem_stride >>= 1; break;
 					case 3: sl >>= 0; sh >>= 0; dram_stride >>= 0; tmem_stride >>= 0; break;
 				}
@@ -388,7 +395,7 @@ void rdp_run_one_command(void) {
 				switch(rdp_tile_size)
 				{
 					case 0: sl >>= 3; sh >>= 3; dram_stride >>= 3; tmem_stride >>= 1; break;
-					case 1: sl >>= 2; sh >>= 2; dram_stride >>= 2; tmem_stride >>= 2; break;
+					case 1: sl >>= 2; sh >>= 2; dram_stride >>= 2; tmem_stride >>= 1; break;
 					case 2: sl >>= 1; sh >>= 1; dram_stride >>= 1; tmem_stride >>= 1; break;
 					case 3: sl >>= 0; sh >>= 0; dram_stride >>= 0; tmem_stride >>= 0; break;
 				}

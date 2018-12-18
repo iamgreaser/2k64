@@ -674,6 +674,9 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 #endif
 		switch(addr)
 		{
+			case 0x04300000: // MI_MODE_REG
+				if((data&0x0800) != 0) { n64_clear_interrupt(0x20); }
+				break;
 			case 0x0430000C: // MI_INTR_MASK_REG
 				if((data&0x0001) != 0) { mi_intr_mask &= ~0x0001; }
 				if((data&0x0002) != 0) { mi_intr_mask |=  0x0001; }
