@@ -10,7 +10,13 @@ switch(rdp_tile_size) {
 			uint32_t data = rdp_tmem[(tmem_offs+(data_s>>3))&0x3FF]; \
 			data >>= ((~data_s)&0x7)*4; \
 			data &= 0xF; \
-			data = rdp_tmem[((rdp_tlut_addr>>2)+data)&0x3FF];
+			data = rdp_tmem[((rdp_tlut_addr>>2)+data)&0x3FF]; \
+			data = (0 \
+				| (((data>>0)&0x1)*0xFF) \
+				| (((((data>>1)&0x1F)*0x21)>>2)<<8) \
+				| (((((data>>6)&0x1F)*0x21)>>2)<<16) \
+				| (((((data>>11)&0x1F)*0x21)>>2)<<24) \
+			);
 #include "rdp/tex-rect-per-fmt.h"
 #undef GET_TEX_DATA
 		} break;
@@ -50,12 +56,30 @@ switch(rdp_tile_size) {
 
 	// 8bpp
 	case 1: switch(rdp_tile_format) {
+		// Color Index
+		case 2: {
+			tmem_stride >>= 2;
+#define GET_TEX_DATA() \
+			uint32_t data_s = ((acc_s>>rdp_tile_shift_s)&rdp_tile_mask_s); \
+			uint32_t data = rdp_tmem[(tmem_offs+(data_s>>2))&0x3FF]; \
+			data >>= ((~data_s)&0x3)*8; \
+			data &= 0xFF; \
+			data = rdp_tmem[((rdp_tlut_addr>>2)+data)&0x3FF]; \
+			data = (0 \
+				| (((data>>0)&0x1)*0xFF) \
+				| (((((data>>1)&0x1F)*0x21)>>2)<<8) \
+				| (((((data>>6)&0x1F)*0x21)>>2)<<16) \
+				| (((((data>>11)&0x1F)*0x21)>>2)<<24) \
+			);
+#include "rdp/tex-rect-per-fmt.h"
+#undef GET_TEX_DATA
+		} break;
 
 		// Intensity+Alpha
 		case 3: {
 			tmem_stride >>= 2;
 #define GET_TEX_DATA() \
-		uint32_t data_s = ((acc_s>>rdp_tile_shift_s)&rdp_tile_mask_s); \
+			uint32_t data_s = ((acc_s>>rdp_tile_shift_s)&rdp_tile_mask_s); \
 			uint32_t data = rdp_tmem[(tmem_offs+(data_s>>2))&0x3FF]; \
 			data >>= ((~data_s)&0x3)*8; \
 			data &= 0xFF; \

@@ -9,6 +9,8 @@ SDL_Surface *window_surface;
 SDL_Surface *surface;
 SDL_Renderer *renderer;
 
+extern uint32_t rdp_tmem[];
+
 FILE *audio_dump_fp;
 
 uint32_t fullrandu32(void)
@@ -1240,6 +1242,18 @@ int main(int argc, char *argv[])
 
 			SDL_LockSurface(surface);
 #include "vi/render.h"
+
+#if DEBUG_SHOW_TMEM
+			for(int sy = 0; sy < 64*4; sy++) {
+			for(int sx = 0; sx < 64*4; sx++) {
+				int x = sx/4;
+				int y = sy/4;
+				uint32_t tmem_val = 0xFF&(rdp_tmem[(y*64+x)>>2]>>(8*((~x)&0x3)));
+				((uint32_t *)surface->pixels)[((sy*surface->pitch)>>2)+sx] = (tmem_val*0x01010100)|0xFF;
+			}
+			}
+#endif
+
 			SDL_UnlockSurface(surface);
 			SDL_BlitSurface(surface, NULL, window_surface, NULL);
 			SDL_UpdateWindowSurface(window);

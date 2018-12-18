@@ -2,7 +2,7 @@
 	for(int y = yl; y < yh; y++, acc_t += dtdy) { \
 		int16_t acc_s = s; \
 		uint32_t dram_offs = (rdp_color_image_addr>>2); \
-		uint32_t tmem_offs = (rdp_tile_tmem_addr<<3); \
+		uint32_t tmem_offs = (rdp_tile_tmem_addr<<1); \
 		dram_offs += (dram_stride>>OFFS_Y_SHIFT)*y; \
 		tmem_offs += tmem_stride*((acc_t>>rdp_tile_shift_t)&rdp_tile_mask_t); \
 		for(int x = xl; x < xh; x++, acc_s += dsdx) { \
