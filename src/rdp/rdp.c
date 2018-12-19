@@ -123,11 +123,22 @@ uint32_t rdp_fog_color = 0;
 uint32_t rdp_blend_color = 0;
 
 // 0x3C Set Combine Mode
+//
 // ((A - B) * C) + D
+//
+// RGB:
 // A: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, 1.0, Noise, 0.0, 0.0, ...
 // B: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, Key Center, Convert K4, 0.0, 0.0, ...
 // C: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, Key Scale, Combined Alpha, Texture 0 Alpha, Texture 1 Alpha, Primitive Alpha, Shaded Alpha, Environment Alpha, LoD Fraction, Primitive LoD Fraction, Convert K5, 0.0, 0.0, ...
 // D: Combined, Texel 0, Texel 1, Primitive, Shade, Environment, 1.0, 0.0
+//
+// Alpha:
+// A: Combined, Texel 0, Texel 1, Primitive, Shaded, Environment, 1.0, 0.0
+// B: Combined, Texel 0, Texel 1, Primitive, Shaded, Environment, 1.0, 0.0
+// C: LoD Fraction, Texel 0, Texel 1, Primitive, Shaded, Environment, Primitive LoD Fraction, 0.0
+// D: Combined, Texel 0, Texel 1, Primitive, Shaded, Environment, 1.0, 0.0
+//
+
 uint32_t rdp_combine_AC0 = 0;
 uint32_t rdp_combine_CC0 = 0;
 uint32_t rdp_combine_AA0 = 0;
@@ -159,6 +170,53 @@ uint32_t rdp_color_image_format = 0;
 uint32_t rdp_color_image_size = 0;
 uint32_t rdp_color_image_width = 0;
 uint32_t rdp_color_image_addr = 0;
+
+#include "rdp/tex-rect-functions.h"
+
+void rdp_cmd_texture_rectangle(void)
+{
+	uint64_t cmd = rdp_cmd_buffer[0];
+	bool is_flipped = (((cmd>>56)&0x1) != 0);
+
+	if(is_flipped) {
+		rdp_debug_printf("RDP %016llX Texture Rectangle Flip\n", cmd);
+	} else {
+		rdp_debug_printf("RDP %016llX Texture Rectangle\n", cmd);
+	}
+
+	int32_t t = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>48);
+	int32_t s = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>32);
+	int32_t dsdx = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>16);
+	int32_t dtdy = (int16_t)(uint16_t)(rdp_cmd_buffer[1]);
+	uint32_t tile = (cmd>>24)&0x7;
+	int32_t yl = (cmd>>0)&0xFFF;
+	int32_t xl = (cmd>>12)&0xFFF;
+	int32_t yh = (cmd>>32)&0xFFF;
+	int32_t xh = (cmd>>44)&0xFFF;
+
+	if(xh < rdp_scissor_xh) { xh = rdp_scissor_xh; }
+	if(yh < rdp_scissor_yh) { yh = rdp_scissor_yh; }
+	if(xl > rdp_scissor_xl-4) { xl = rdp_scissor_xl-4; }
+	if(yl > rdp_scissor_yl-4) { yl = rdp_scissor_yl-4; }
+
+	xh >>= 2;
+	yh >>= 2;
+	xl >>= 2;
+	yl >>= 2;
+	int tmem_stride = (rdp_tile_line+0)<<2;
+	int dram_stride = (rdp_color_image_width+1);
+	switch(rdp_tile_size)
+	{
+		case 0: tmem_stride >>= 1; break;
+		case 1: tmem_stride >>= 1; break;
+		case 2: tmem_stride >>= 1; break;
+		case 3: tmem_stride >>= 0; break;
+	}
+	rdp_debug_printf("Render XY %d,%d -> %d,%d [s=%d]\n", xl, yl, xh, yh, dram_stride);
+	rdp_debug_printf("Render ST %d,%d ++ %d,%d [s=%d]\n", s, t, dsdx, dtdy, tmem_stride);
+#include "rdp/tex-rect-switch.h"
+
+}
 
 void rdp_run_one_command(void) {
 	uint64_t cmd;
@@ -238,47 +296,7 @@ void rdp_run_one_command(void) {
 		case 0x24:
 		case 0x25: {
 			if(rdp_cmd_len < 2) break;
-			bool is_flipped = (((cmd>>56)&0x1) != 0);
-
-			if(is_flipped) {
-				rdp_debug_printf("RDP %016llX Texture Rectangle Flip\n", cmd);
-			} else {
-				rdp_debug_printf("RDP %016llX Texture Rectangle\n", cmd);
-			}
-
-
-			int32_t t = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>48);
-			int32_t s = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>32);
-			int32_t dsdx = (int16_t)(uint16_t)(rdp_cmd_buffer[1]>>16);
-			int32_t dtdy = (int16_t)(uint16_t)(rdp_cmd_buffer[1]);
-			uint32_t tile = (cmd>>24)&0x7;
-			int32_t yl = (cmd>>0)&0xFFF;
-			int32_t xl = (cmd>>12)&0xFFF;
-			int32_t yh = (cmd>>32)&0xFFF;
-			int32_t xh = (cmd>>44)&0xFFF;
-
-			if(xh < rdp_scissor_xh) { xh = rdp_scissor_xh; }
-			if(yh < rdp_scissor_yh) { yh = rdp_scissor_yh; }
-			if(xl > rdp_scissor_xl-4) { xl = rdp_scissor_xl-4; }
-			if(yl > rdp_scissor_yl-4) { yl = rdp_scissor_yl-4; }
-
-			xh >>= 2;
-			yh >>= 2;
-			xl >>= 2;
-			yl >>= 2;
-			int tmem_stride = (rdp_tile_line+0)<<2;
-			int dram_stride = (rdp_color_image_width+1);
-			switch(rdp_tile_size)
-			{
-				case 0: tmem_stride >>= 1; break;
-				case 1: tmem_stride >>= 1; break;
-				case 2: tmem_stride >>= 1; break;
-				case 3: tmem_stride >>= 0; break;
-			}
-			rdp_debug_printf("Render XY %d,%d -> %d,%d [s=%d]\n", xl, yl, xh, yh, dram_stride);
-			rdp_debug_printf("Render ST %d,%d ++ %d,%d [s=%d]\n", s, t, dsdx, dtdy, tmem_stride);
-			int32_t acc_t = t;
-#include "rdp/tex-rect-switch.h"
+			rdp_cmd_texture_rectangle();
 			rdp_cmd_len = 0;
 		} break;
 
