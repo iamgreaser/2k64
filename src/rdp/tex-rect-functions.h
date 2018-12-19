@@ -73,6 +73,20 @@
 #undef GET_TEX_DATA
 #undef TEX_FUNCTION_NAME
 
+// 16bpp Intensity + Alpha
+#define TEX_FUNCTION_NAME tex_rect_rdp_16ia
+#define GET_TEX_DATA() \
+	uint32_t data = rdp_tmem[(tmem_offs+(data_s>>1))&0x3FF]; \
+	data >>= ((~data_s)&0x1)*16; \
+	data &= 0xFFFF; \
+	data = (0 \
+		| ((data&0xFF)) \
+		| ((data>>8)*0x01010100) \
+	);
+#include "rdp/tex-rect-per-fmt.h"
+#undef GET_TEX_DATA
+#undef TEX_FUNCTION_NAME
+
 // 16bpp RGBA
 #define TEX_FUNCTION_NAME tex_rect_rdp_16rgba
 #define GET_TEX_DATA() \

@@ -8,7 +8,7 @@ switch(rdp_tile_size) {
 			CALL_TEXRECT_FUNCTION(tex_rect_rdp_4p);
 		} break;
 
-		// Intensity+Alpha
+		// Intensity + Alpha
 		case 3: {
 			CALL_TEXRECT_FUNCTION(tex_rect_rdp_4ia);
 		} break;
@@ -27,7 +27,7 @@ switch(rdp_tile_size) {
 			CALL_TEXRECT_FUNCTION(tex_rect_rdp_8p);
 		} break;
 
-		// Intensity+Alpha
+		// Intensity + Alpha
 		case 3: {
 			CALL_TEXRECT_FUNCTION(tex_rect_rdp_8ia);
 		} break;
@@ -42,8 +42,17 @@ switch(rdp_tile_size) {
 
 
 	// 16bpp
-	case 2: {
-		CALL_TEXRECT_FUNCTION(tex_rect_rdp_16rgba);
+	case 2: switch(rdp_tile_format) {
+		// RGBA
+		default:
+		case 0: {
+			CALL_TEXRECT_FUNCTION(tex_rect_rdp_16rgba);
+		} break;
+
+		// Intensity + Alpha
+		case 3: {
+			CALL_TEXRECT_FUNCTION(tex_rect_rdp_16ia);
+		} break;
 	} break;
 
 	default:
