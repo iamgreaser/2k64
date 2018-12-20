@@ -130,6 +130,12 @@ uint32_t rdp_fog_color = 0;
 // 0x39 Set Blend Color
 uint32_t rdp_blend_color = 0;
 
+// 0x3A Set Prim Color
+uint32_t rdp_prim_color = 0;
+
+// 0x3B Set Env Color
+uint32_t rdp_env_color = 0;
+
 // 0x3C Set Combine Mode
 //
 // ((A - B) * C) + D
@@ -243,7 +249,7 @@ void rdp_run_one_command(void) {
 	assert(rdp_cmd_len >= 0 && rdp_cmd_len < sizeof(rdp_cmd_buffer)/sizeof(rdp_cmd_buffer[0]));
 	rdp_cmd_buffer[rdp_cmd_len++] = cmd;
 	cmd = rdp_cmd_buffer[0];
-	switch(cmd>>56) {
+	switch((cmd>>56)&0x3F) {
 		case 0x08: // Non-shaded triangle
 		{
 			if(rdp_cmd_len < 4) break;
@@ -421,6 +427,12 @@ void rdp_run_one_command(void) {
 			rdp_cmd_len = 0;
 			break;
 
+		case 0x32:
+			rdp_debug_printf("RDP %016llX Set Tile Size\n", cmd);
+			rdp_debug_printf(" --- TODO! --- \n");
+			rdp_cmd_len = 0;
+			break;
+
 		case 0x34:
 			rdp_debug_printf("RDP %016llX Load Tile\n", cmd);
 			{
@@ -549,6 +561,18 @@ void rdp_run_one_command(void) {
 		case 0x39:
 			rdp_debug_printf("RDP %016llX Set Blend Color\n", cmd);
 			rdp_blend_color = cmd&0xFFFFFFFF;
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x3A:
+			rdp_debug_printf("RDP %016llX Set Prim Color\n", cmd);
+			rdp_prim_color = cmd&0xFFFFFFFF;
+			rdp_cmd_len = 0;
+			break;
+
+		case 0x3B:
+			rdp_debug_printf("RDP %016llX Set Env Color\n", cmd);
+			rdp_env_color = cmd&0xFFFFFFFF;
 			rdp_cmd_len = 0;
 			break;
 

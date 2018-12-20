@@ -59,10 +59,10 @@ void n64rsp_mem_write(struct rsp *rsp, uint64_t addr, uint32_t mask, uint32_t da
 #else
 #define DEBUG_AI 0
 #define DEBUG_DP 0
-#define DEBUG_MI 1
-#define DEBUG_PI 1
+#define DEBUG_MI 0
+#define DEBUG_PI 0
 #define DEBUG_PIFRAM 0
-#define DEBUG_SI 1
+#define DEBUG_SI 0
 #define DEBUG_SP 0
 #define DEBUG_VI 0
 

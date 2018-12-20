@@ -616,7 +616,7 @@ enum mipserr MIPSXNAME(_run_op)(struct MIPSNAME *C)
 #endif
 
 #ifdef MIPS_IS_RSP
-	C->pc &= 0xFFF;
+	C->pc &= 0xFFC;
 #else
 	C->pc = (SREG)(int32_t)C->pc;
 #endif

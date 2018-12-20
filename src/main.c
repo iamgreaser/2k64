@@ -828,7 +828,9 @@ void n64primary_mem_write(struct vr4300 *C, uint64_t addr, uint32_t mask, uint32
 
 		// FIXME: this is lazy and should actually emulate separately
 		if(pi_wr_len != 0) {
+#if DEBUG_PI
 			printf("PI DMA WRITE RAM %08X <- %08X CART %08X BYTES\n", pi_dram_addr, pi_cart_addr, pi_wr_len);
+#endif
 			uint32_t dst = pi_dram_addr & ~0x7;
 			uint32_t src = pi_cart_addr & ~0x1;
 
