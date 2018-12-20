@@ -49,6 +49,11 @@ switch(rdp_tile_size) {
 			CALL_TEXRECT_FUNCTION(tex_rect_rdp_16rgba);
 		} break;
 
+		// YUV
+		case 1: {
+			CALL_TEXRECT_FUNCTION(tex_rect_rdp_16yuv);
+		} break;
+
 		// Intensity + Alpha
 		case 3: {
 			CALL_TEXRECT_FUNCTION(tex_rect_rdp_16ia);

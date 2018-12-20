@@ -11,6 +11,14 @@ uint64_t rdp_cmd_len = 0;
 // (fills should be faster)
 uint32_t rdp_cooldown = 0;
 
+// 0x2C Set Convert
+int32_t rdp_convert_k0 = 0;
+int32_t rdp_convert_k1 = 0;
+int32_t rdp_convert_k2 = 0;
+int32_t rdp_convert_k3 = 0;
+int32_t rdp_convert_k4 = 0;
+int32_t rdp_convert_k5 = 0;
+
 // 0x2D Set Scissor
 int32_t rdp_scissor_xh = 0;
 int32_t rdp_scissor_yh = 0;
@@ -205,7 +213,7 @@ void rdp_cmd_texture_rectangle(void)
 	yl >>= 2;
 	int tmem_stride = (rdp_tile_line+0)<<2;
 	int dram_stride = (rdp_color_image_width+1);
-	switch(rdp_tile_size)
+	switch((rdp_tile_format == 1 ? 3 : rdp_tile_size))
 	{
 		case 0: tmem_stride >>= 1; break;
 		case 1: tmem_stride >>= 1; break;
@@ -322,6 +330,24 @@ void rdp_run_one_command(void) {
 			n64_set_interrupt(0x20);
 			break;
 
+		case 0x2C:
+			rdp_debug_printf("RDP %016llX Set Convert\n", cmd);
+			rdp_convert_k0 = ((cmd>>45)<<(32-9)); rdp_convert_k0 >>= (32-9);
+			rdp_convert_k1 = ((cmd>>36)<<(32-9)); rdp_convert_k1 >>= (32-9);
+			rdp_convert_k2 = ((cmd>>27)<<(32-9)); rdp_convert_k2 >>= (32-9);
+			rdp_convert_k3 = ((cmd>>18)<<(32-9)); rdp_convert_k3 >>= (32-9);
+			rdp_convert_k4 = ((cmd>>9)<<(32-9)); rdp_convert_k4 >>= (32-9);
+			rdp_convert_k5 = ((cmd>>0)<<(32-9)); rdp_convert_k5 >>= (32-9);
+			rdp_debug_printf("coeffs %d, %d, %d, %d, %d, %d\n",
+				rdp_convert_k0,
+				rdp_convert_k1,
+				rdp_convert_k2,
+				rdp_convert_k3,
+				rdp_convert_k4,
+				rdp_convert_k5);
+			rdp_cmd_len = 0;
+			break;
+
 		case 0x2D:
 			rdp_debug_printf("RDP %016llX Set Scissor\n", cmd);
 			rdp_scissor_yl = (cmd>>0)&0xFFF;
@@ -410,12 +436,15 @@ void rdp_run_one_command(void) {
 				sh >>= 2;
 				tl >>= 2;
 				th >>= 2;
-				switch(rdp_tile_size)
+				switch((rdp_tile_format == 1 ? 3 : rdp_tile_size))
 				{
 					case 0: sl >>= 3; sh >>= 3; dram_stride >>= 3; tmem_stride >>= 1; break;
 					case 1: sl >>= 2; sh >>= 2; dram_stride >>= 2; tmem_stride >>= 1; break;
 					case 2: sl >>= 1; sh >>= 1; dram_stride >>= 1; tmem_stride >>= 1; break;
 					case 3: sl >>= 0; sh >>= 0; dram_stride >>= 0; tmem_stride >>= 0; break;
+				}
+				if(rdp_tile_format == 1) {
+					dram_stride >>= 1;
 				}
 				sh += 1;
 				th += 1;

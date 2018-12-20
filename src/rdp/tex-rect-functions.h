@@ -87,6 +87,37 @@
 #undef GET_TEX_DATA
 #undef TEX_FUNCTION_NAME
 
+// "16bpp" YUV
+#define TEX_FUNCTION_NAME tex_rect_rdp_16yuv
+#define GET_TEX_DATA() \
+	uint32_t data = rdp_tmem[(tmem_offs+(data_s>>1))&0x3FF]; \
+	{ \
+		int32_t cy = (data>>(16*((~data_s)&0x1)))&0xFF; \
+		int32_t cu = ((data>>24)&0xFF) - 0x80; \
+		int32_t cv = ((data>>8)&0xFF) - 0x80; \
+		/* This step is done in the TF (that's here!) */ \
+		int32_t cr = cy + ((rdp_convert_k0*cv + (1<<6))>>7); \
+		int32_t cg = cy + ((rdp_convert_k1*cu + rdp_convert_k2*cv + (1<<6))>>7); \
+		int32_t cb = cy + ((rdp_convert_k3*cu + (1<<6))>>7); \
+		/* This step is done in the CC */ \
+		cr = (((cr - (rdp_convert_k4<<1))*rdp_convert_k5 + (1<<6))>>7) + cr; \
+		cg = (((cg - (rdp_convert_k4<<1))*rdp_convert_k5 + (1<<6))>>7) + cg; \
+		cb = (((cb - (rdp_convert_k4<<1))*rdp_convert_k5 + (1<<6))>>7) + cb; \
+		/* And here's a final clamp... */ \
+		cr = (cr < 0 ? 0 : cr > 0xFF ? 0xFF : cr); \
+		cg = (cg < 0 ? 0 : cg > 0xFF ? 0xFF : cg); \
+		cb = (cb < 0 ? 0 : cb > 0xFF ? 0xFF : cb); \
+		data = (0 \
+			| (cr<<24) \
+			| (cg<<16) \
+			| (cb<<8) \
+			| 0xFF \
+		); \
+	}
+#include "rdp/tex-rect-per-fmt.h"
+#undef GET_TEX_DATA
+#undef TEX_FUNCTION_NAME
+
 // 16bpp RGBA
 #define TEX_FUNCTION_NAME tex_rect_rdp_16rgba
 #define GET_TEX_DATA() \
